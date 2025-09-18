@@ -26,6 +26,7 @@ interface Property {
   images: string[];
   latitude: string;
   longitude: string;
+  category: "rent" | "sale" | "pg";
 }
 
 const HeroCarousel: React.FC = () => {
@@ -75,7 +76,7 @@ const HeroCarousel: React.FC = () => {
   );
 };
 
-const dummyNoidaProperties: Property[] = [
+const dummyNoidaProperties:any = [
   {
     _id: "dummy1",
     property_name: "Noida Heights",
@@ -298,6 +299,7 @@ const ListPage: React.FC = () => {
                               bedroom: item.bed,
                               bathroom: item.bathroom,
                               price: item.rate,
+                              category:item.category
                             }}
                           />
                         </div>
@@ -327,8 +329,8 @@ const ListPage: React.FC = () => {
                       ? dummyNoidaProperties
                       : []
                     )
-                    .filter((item) => item.latitude && item.longitude)
-                    .map((item) => ({
+                    .filter((item:any) => item.latitude && item.longitude)
+                    .map((item:any) => ({
                       id: item._id,
                       latitude: parseFloat(item.latitude),
                       longitude: parseFloat(item.longitude),

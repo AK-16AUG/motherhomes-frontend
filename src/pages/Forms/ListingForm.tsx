@@ -21,7 +21,7 @@ interface PropertyFormData {
   property_name: string;
   description: string;
   rate: string;
-  category: "rent" | "sale";
+  category: "rent" | "sale"|"pg";
   amenties: string[];
   services: string[];
   images: File[];
@@ -36,6 +36,8 @@ interface PropertyFormData {
   availability: boolean;
   latitude: string;
   longitude: string;
+  perPersonPrice?: string;
+  totalCapacity?: string;
 }
 
 const MultiSelect = ({
@@ -175,6 +177,8 @@ export default function AddListing() {
     availability: true,
     latitude: "",
     longitude: "",
+    perPersonPrice:'',
+  totalCapacity: ""
   });
 
   const [amenities, setAmenities] = useState<Amenity[]>([]);
@@ -333,6 +337,10 @@ export default function AddListing() {
       formDataToSend.append("availability", String(formData.availability));
       formDataToSend.append("latitude", formData.latitude);
       formDataToSend.append("longitude", formData.longitude);
+if (formData.category === "pg") {
+  formDataToSend.append("perPersonPrice", formData.perPersonPrice || "");
+  formDataToSend.append("totalCapacity", formData.totalCapacity || "");
+}
 
       // Append videos
       formData.videos.forEach((video) => {
@@ -427,6 +435,7 @@ export default function AddListing() {
                 >
                   <option value="rent">Rent</option>
                   <option value="sale">Sale</option>
+                  <option value="pg">Pg</option>
                 </select>
               </div>
 
@@ -609,6 +618,39 @@ export default function AddListing() {
                   required
                 />
               </div>
+{formData.category === "pg" && (
+  <>
+    <div>
+      <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+        Per Person Price*
+      </label>
+      <input
+        type="text"
+        name="perPersonPrice"
+        value={formData.perPersonPrice || ""}
+        onChange={handleChange}
+        className={inputClass}
+        required
+        placeholder="Enter per person price"
+      />
+    </div>
+
+    <div>
+      <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+        Total Capacity*
+      </label>
+      <input
+        type="text"
+        name="totalCapacity"
+        value={formData.totalCapacity || ""}
+        onChange={handleChange}
+        className={inputClass}
+        required
+        placeholder="Enter total capacity"
+      />
+    </div>
+  </>
+)}
 
               <div className="flex items-center gap-3">
                 <input

@@ -34,7 +34,7 @@ interface PropertyData {
   _id: string;
   property_name: string;
   city: string;
-  category: "sale" | "rent";
+  category: "sale" | "rent"|"pg";
   rate: number;
   area: number;
   bed: number;
@@ -44,6 +44,8 @@ interface PropertyData {
   videos: string[];
   amenties: Amenity[];
   services: Service[];
+  perPersonPrice?: string;
+  totalCapacity?:string
 }
 
 interface FormData {
@@ -949,7 +951,12 @@ const SingleListing: React.FC = () => {
                         : "bg-yellow-100 text-yellow-800"
                     }`}
                   >
-                    {property?.category === "sale" ? "Sale" : "Rent"}
+                 {property?.category === "sale"
+  ? "sale"
+  : property?.category === "pg"
+  ? "pg"
+  : "rent"}
+
                   </span>
                 </h1>
                 <p className="text-gray-600 flex items-center">
@@ -1048,6 +1055,19 @@ const SingleListing: React.FC = () => {
                       <span className="text-gray-600">Furnishing:</span>
                       <span className="font-medium">
                         {property?.furnishing_type || "N/A"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Per Person Rent For Pg</span>
+                      <span className="font-medium">
+                        {property?.perPersonPrice|| "N/A"}
+                      </span>
+                    </div> 
+ 
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Total Capacity:</span>
+                      <span className="font-medium">
+                        {property?.totalCapacity || "N/A"}
                       </span>
                     </div>
                     <div className="flex justify-between">

@@ -18,6 +18,7 @@ interface CardItem {
   totalFloors?: number;
   age?: number;
   amenities?: string[];
+  category: "rent" | "sale" | "pg";
 }
 
 interface CardProps {
@@ -119,13 +120,19 @@ function Card({ item }: CardProps) {
             />
           ))}
         </div>
+        {/* Category Badge */}
+        <div className="absolute top-4 left-4 z-30">
+          <div className="backdrop-blur-md bg-yellow-400 text-black px-3 py-1.5 text-xs font-semibold shadow-lg">
+            {item.category.toUpperCase()}
+          </div>
+        </div>
         {/* Image Indicators */}
         {displayImages.length > 1 && (
           <div className="absolute bottom-4 right-4 flex gap-2 z-30">
             {displayImages.map((_, index) => (
               <button
                 key={index}
-                onClick={e => {
+                onClick={(e) => {
                   e.stopPropagation();
                   setCurrentImageIndex(index);
                 }}
