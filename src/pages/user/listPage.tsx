@@ -27,6 +27,7 @@ interface Property {
   latitude: string;
   longitude: string;
   category: "rent" | "sale" | "pg";
+  totalCapacity: string;
 }
 
 const HeroCarousel: React.FC = () => {
@@ -271,7 +272,7 @@ const ListPage: React.FC = () => {
                               img: item.images?.[0] || "",
                               title: item.property_name,
                               address: `${item.city}, ${item.state}`,
-                              bedroom: item.bed,
+                              bedroom: item.category === "pg" ? parseInt(item.totalCapacity) || 0 : item.bed,
                               bathroom: item.bathroom,
                               price: item.rate,
                               category:item.category
