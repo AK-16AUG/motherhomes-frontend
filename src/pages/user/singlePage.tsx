@@ -850,7 +850,7 @@ const SingleListing: React.FC = () => {
 
   // Add function to handle login redirect
   const handleLoginRedirect = () => {
-    navigate("/login");
+    navigate("/signin");
   };
 
   // Add function to handle signup redirect
