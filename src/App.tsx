@@ -58,7 +58,7 @@ export default function App() {
       <Router>
         <ScrollToTop />
         <Routes>
-          {/* Public Routes */}
+          
           <Route path="/" element={<HomePage />} />
           <Route path="/signin" element={<SignIn />} />
           <Route path="/resetpass" element={<Reset />} />
