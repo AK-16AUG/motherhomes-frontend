@@ -1,6 +1,5 @@
 import React from "react";
 import video from "../../assets/Animation_Video_MotherHome_Discovery.mp4"
-import ThemeTogglerTwo from "../../components/common/ThemeTogglerTwo";
 
 export default function AuthLayout({
   children,
@@ -31,9 +30,7 @@ export default function AuthLayout({
             </video>
           </div>
         </div>
-        <div className="fixed z-50 hidden bottom-6 right-6 sm:block">
-          <ThemeTogglerTwo />
-        </div>
+
       </div>
     </div>
   );

@@ -76,32 +76,7 @@ const HeroCarousel: React.FC = () => {
   );
 };
 
-const dummyNoidaProperties:any = [
-  {
-    _id: "dummy1",
-    property_name: "Noida Heights",
-    rate: 25000,
-    bed: 3,
-    bathroom: 2,
-    city: "Noida",
-    state: "Uttar Pradesh",
-    images: ["https://images.unsplash.com/photo-1565182999561-18d7dc61c393?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80"],
-    latitude: "28.5355",
-    longitude: "77.391",
-  },
-  {
-    _id: "dummy2",
-    property_name: "Noida Residency",
-    rate: 18000,
-    bed: 2,
-    bathroom: 1,
-    city: "Noida",
-    state: "Uttar Pradesh",
-    images: ["https://images.unsplash.com/photo-1571055107559-3e67626fa8be?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80"],
-    latitude: "28.57",
-    longitude: "77.412",
-  },
-];
+
 
 const ListPage: React.FC = () => {
   const location = useLocation();
@@ -323,12 +298,7 @@ const ListPage: React.FC = () => {
               <div className="order-1 lg:order-2">
                 <div className="w-full h-[300px] sm:h-[400px] lg:h-[calc(100vh-6rem)] sticky top-24">
                   <Map items={
-                    (displayedData.length > 0
-                      ? displayedData
-                      : cityParam && cityParam.toLowerCase() === "noida"
-                      ? dummyNoidaProperties
-                      : []
-                    )
+                    displayedData
                     .filter((item:any) => item.latitude && item.longitude)
                     .map((item:any) => ({
                       id: item._id,

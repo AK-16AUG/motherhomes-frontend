@@ -19,7 +19,7 @@ interface Property {
   property_name: string;
   description: string;
   rate: string;
-  category: "rent" | "sale";
+  category: "rent" | "sale" | "pg";
   city: string;
   state: string;
   images: string[];
@@ -29,11 +29,13 @@ interface Property {
   availability: boolean;
   status?: "Available" | "Unavailable" | "Occupied";
   createdAt: string;
+  totalCapacity?: string;
 }
 
 const CATEGORY_BADGE_MAP = {
   rent: { color: "blue", label: "For Rent" },
   sale: { color: "yellow", label: "For Sale" },
+  pg: { color: "green", label: "PG" },
 } as const;
 
 const FURNISHING_BADGE_MAP = {
@@ -41,12 +43,6 @@ const FURNISHING_BADGE_MAP = {
   "Fully furnished": { color: "green", label: "Fully furnished" },
   Raw: { color: "gray", label: "Raw" },
 } as const;
-
-// const STATUS_BADGE_MAP = {
-//   Available: { color: "green", label: "Available" },
-//   Unavailable: { color: "red", label: "Unavailable" },
-//   Occupied: { color: "yellow", label: "Occupied" },
-// } as const;
 
 export default function ListingTable() {
   const [properties, setProperties] = useState<Property[]>([]);
@@ -61,17 +57,13 @@ export default function ListingTable() {
         setState("loading");
         const response = await instance.get(`/property`);
 
-        // Debug the response to see what's coming back
         console.log("API Response:", response.data);
 
-        // Make sure we're setting an array to state
         if (Array.isArray(response.data)) {
           setProperties(response.data);
         } else if (response.data && Array.isArray(response.data.results)) {
-          // In case the API returns data in a nested object format
           setProperties(response.data.results);
         } else {
-          // If we can't find an array, set an empty one and log the issue
           console.error("Expected array from API but got:", response.data);
           setProperties([]);
         }
@@ -105,11 +97,13 @@ export default function ListingTable() {
   };
 
   const formatCurrency = (amount: string) => {
+    const numAmount = Number(amount);
+    if (isNaN(numAmount)) return "₹0";
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency: "INR",
       maximumFractionDigits: 0,
-    }).format(Number(amount));
+    }).format(numAmount);
   };
 
   const getCategoryBadge = (category: Property["category"]) => {
@@ -175,14 +169,14 @@ export default function ListingTable() {
 
   if (state === "loading") {
     return (
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
         <div className="max-w-full overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
                 {[...Array(10)].map((_, i) => (
                   <TableCell isHeader key={i}>
-                    <div className="h-6 w-24 bg-gray-100 dark:bg-gray-700 rounded animate-pulse" />
+                    <div className="h-6 w-24 bg-gray-100 rounded animate-pulse" />
                   </TableCell>
                 ))}
               </TableRow>
@@ -192,7 +186,7 @@ export default function ListingTable() {
                 <TableRow key={rowIndex}>
                   {[...Array(10)].map((_, cellIndex) => (
                     <TableCell key={cellIndex}>
-                      <div className="h-6 w-full bg-gray-100 dark:bg-gray-700 rounded animate-pulse" />
+                      <div className="h-6 w-full bg-gray-100 rounded animate-pulse" />
                     </TableCell>
                   ))}
                 </TableRow>
@@ -206,7 +200,7 @@ export default function ListingTable() {
 
   if (state === "error") {
     return (
-      <div className="flex flex-col items-center justify-center h-64 text-red-500 dark:text-red-400 gap-2">
+      <div className="flex flex-col items-center justify-center h-64 text-red-500 gap-2">
         <svg
           className="w-8 h-8"
           fill="none"
@@ -227,7 +221,7 @@ export default function ListingTable() {
 
   if (properties.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 text-gray-500 dark:text-gray-400 gap-2">
+      <div className="flex flex-col items-center justify-center h-64 text-gray-500 gap-2">
         <svg
           className="w-8 h-8"
           fill="none"
@@ -247,65 +241,65 @@ export default function ListingTable() {
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-white/[0.05] dark:bg-white/[0.03]">
+    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
       <div className="w-full overflow-x-auto">
         <Table
           aria-label="Properties list"
-          className="text-gray-900 dark:text-gray-100 min-w-[900px]"
+          className="text-gray-900 min-w-[900px]"
         >
           <TableHeader>
             <TableRow>
               <TableCell
                 isHeader
-                className="text-left px-5 py-3 text-gray-900 dark:text-gray-100 font-medium"
+                className="text-left px-5 py-3 text-gray-900 font-medium"
               >
                 Property
               </TableCell>
               <TableCell
                 isHeader
-                className="text-left px-5 py-3 text-gray-900 dark:text-gray-100 font-medium"
+                className="text-left px-5 py-3 text-gray-900 font-medium"
               >
                 Category
               </TableCell>
               <TableCell
                 isHeader
-                className="text-left px-5 py-3 text-gray-900 dark:text-gray-100 font-medium"
+                className="text-left px-5 py-3 text-gray-900 font-medium"
               >
                 Rate
               </TableCell>
               <TableCell
                 isHeader
-                className="text-left px-5 py-3 text-gray-900 dark:text-gray-100 font-medium"
+                className="text-left px-5 py-3 text-gray-900 font-medium"
               >
                 Location
               </TableCell>
               <TableCell
                 isHeader
-                className="text-left px-5 py-3 text-gray-900 dark:text-gray-100 font-medium"
+                className="text-left px-5 py-3 text-gray-900 font-medium"
               >
                 Details
               </TableCell>
               <TableCell
                 isHeader
-                className="text-left px-5 py-3 text-gray-900 dark:text-gray-100 font-medium"
+                className="text-left px-5 py-3 text-gray-900 font-medium"
               >
                 Furnishing
               </TableCell>
               <TableCell
                 isHeader
-                className="text-left px-5 py-3 text-gray-900 dark:text-gray-100 font-medium"
+                className="text-left px-5 py-3 text-gray-900 font-medium"
               >
                 Availability
               </TableCell>
               <TableCell
                 isHeader
-                className="text-left px-5 py-3 text-gray-900 dark:text-gray-100 font-medium"
+                className="text-left px-5 py-3 text-gray-900 font-medium"
               >
                 Added On
               </TableCell>
               <TableCell
                 isHeader
-                className="text-left px-5 py-3 text-gray-900 dark:text-gray-100 font-medium"
+                className="text-left px-5 py-3 text-gray-900 font-medium"
               >
                 Actions
               </TableCell>
@@ -317,52 +311,60 @@ export default function ListingTable() {
               properties.map((property) => (
                 <TableRow
                   key={property._id}
-                  className="hover:bg-gray-50 dark:hover:bg-white/[0.05]"
+                  className="hover:bg-gray-50"
                 >
-                  <TableCell className="text-left px-5 py-3 font-medium text-gray-900 dark:text-gray-100">
+                  <TableCell className="text-left px-5 py-3 font-medium text-gray-900">
                     <Link
                       to={`/listing/${property._id}`}
-                      className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                      className="text-blue-600 hover:text-blue-800"
                     >
                       {property.property_name}
-                      <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-1">
+                      <p className="text-sm text-gray-500 line-clamp-1">
                         {property.description}
                       </p>
                     </Link>
                   </TableCell>
-                  <TableCell className="text-left px-5 py-3 text-gray-900 dark:text-gray-100">
+                  <TableCell className="text-left px-5 py-3 text-gray-900">
                     {getCategoryBadge(property.category)}
                   </TableCell>
-                  <TableCell className="text-left px-5 py-3 font-medium text-gray-900 dark:text-gray-100">
+                  <TableCell className="text-left px-5 py-3 font-medium text-gray-900">
                     {formatCurrency(property.rate)}
                   </TableCell>
-                  <TableCell className="text-left px-5 py-3 text-gray-900 dark:text-gray-100">
+                  <TableCell className="text-left px-5 py-3 text-gray-900">
                     <div>
-                      <span className="text-gray-900 dark:text-gray-100">
+                      <span className="text-gray-900">
                         {property.city}
                       </span>
-                      <span className="block text-gray-500 dark:text-gray-400">
+                      <span className="block text-gray-500">
                         {property.state}
                       </span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-left px-5 py-3 text-gray-900 dark:text-gray-100">
+                  <TableCell className="text-left px-5 py-3 text-gray-900">
                     <div className="flex gap-2">
-                      <span className="text-sm text-gray-900 dark:text-gray-100">
-                        {property.bed} Beds
-                      </span>
-                      <span className="text-sm text-gray-900 dark:text-gray-100">
-                        |
-                      </span>
-                      <span className="text-sm text-gray-900 dark:text-gray-100">
-                        {property.bathroom} Baths
-                      </span>
+                      {property.category === "pg" ? (
+                        <span className="text-sm text-gray-900">
+                          {property.totalCapacity || "N/A"} Capacity
+                        </span>
+                      ) : (
+                        <>
+                          <span className="text-sm text-gray-900">
+                            {property.bed} Beds
+                          </span>
+                          <span className="text-sm text-gray-900">
+                            |
+                          </span>
+                          <span className="text-sm text-gray-900">
+                            {property.bathroom} Baths
+                          </span>
+                        </>
+                      )}
                     </div>
                   </TableCell>
-                  <TableCell className="text-left px-5 py-3 text-gray-900 dark:text-gray-100">
+                  <TableCell className="text-left px-5 py-3 text-gray-900">
                     {getFurnishingBadge(property.furnishing_type)}
                   </TableCell>
-                  <TableCell className="text-left px-3 py-2 text-gray-900 dark:text-gray-100">
+                  <TableCell className="text-left px-3 py-2 text-gray-900">
                     {editingAvailabilityId === property._id ? (
                       <select
                         value={availabilityEditValue ? "Available" : "Occupied"}
@@ -385,7 +387,7 @@ export default function ListingTable() {
                             setEditingAvailabilityId(property._id);
                             setAvailabilityEditValue(property.availability);
                           }}
-                          className="p-1 text-gray-500 hover:text-blue-600 hover:bg-gray-50 dark:text-gray-400 dark:hover:text-blue-400 dark:hover:bg-white/[0.05] rounded transition-colors"
+                          className="p-1 text-gray-500 hover:text-blue-600 hover:bg-gray-50 rounded transition-colors"
                           title="Edit availability"
                         >
                           <Pencil size={16} />
@@ -393,14 +395,14 @@ export default function ListingTable() {
                       </div>
                     )}
                   </TableCell>
-                  <TableCell className="text-left px-5 py-3 text-gray-900 dark:text-gray-100">
+                  <TableCell className="text-left px-5 py-3 text-gray-900">
                     {formatDate(property.createdAt)}
                   </TableCell>
-                  <TableCell className="text-left px-5 py-3 text-gray-900 dark:text-gray-100">
+                  <TableCell className="text-left px-5 py-3 text-gray-900">
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleDelete(property._id)}
-                        className="p-1 text-gray-500 hover:text-red-600 hover:bg-gray-50 dark:text-gray-400 dark:hover:text-red-400 dark:hover:bg-white/[0.05] rounded transition-colors"
+                        className="p-1 text-gray-500 hover:text-red-600 hover:bg-gray-50 rounded transition-colors"
                         title="Delete property"
                       >
                         <Trash2 size={16} />
@@ -411,7 +413,7 @@ export default function ListingTable() {
               ))
             ) : (
               <TableRow>
-                <TableCell  className="text-center py-4">
+                <TableCell className="text-center py-4">
                   No properties data available
                 </TableCell>
               </TableRow>

@@ -64,6 +64,8 @@ interface Property {
   updatedAt: string;
   __v: number;
   area?: string;
+  perPersonPrice?: string;
+  totalCapacity?: string;
 }
 
 interface MediaItem {
@@ -196,6 +198,8 @@ export const EditPropertyModal = ({
     amenities: [] as string[], // use correct spelling in state/UI
     services: [] as string[],
     images: [] as File[],
+    perPersonPrice: "",
+    totalCapacity: "",
   });
 
   const [amenities, setAmenities] = useState<{ _id: string; name: string }[]>(
@@ -222,8 +226,8 @@ export const EditPropertyModal = ({
       bed: property.bed,
       bathroom: property.bathroom,
       availability: property.availability,
-      amenities: Array.isArray(property.amenties)
-        ? property.amenties
+      amenities: Array.isArray(property.amenities)
+        ? property.amenities
             .map((item: any) =>
               typeof item === "string"
                 ? amenities.find((a) => a._id === item || a.name === item)
@@ -247,6 +251,8 @@ export const EditPropertyModal = ({
             .filter(Boolean)
         : [],
       images: [],
+      perPersonPrice: property.perPersonPrice || "",
+      totalCapacity: property.totalCapacity || "",
     });
     setExistingImages(property.images || []);
     setImagesToDelete([]);
@@ -330,9 +336,8 @@ export const EditPropertyModal = ({
         bed: Number(formData.bed),
         bathroom: Number(formData.bathroom),
         images: flatExistingImages, // always a flat array of strings
-        amenties: formData.amenities, // map to backend typo
+        amenities: formData.amenities,
       };
-      delete updateData.amenities; // remove correct spelling from payload
 
       if (formData.images.length > 0) {
         const formDataToSend = new FormData();
@@ -452,40 +457,72 @@ export const EditPropertyModal = ({
                   <option value="">Select Category</option>
                   <option value="rent">Rent</option>
                   <option value="sale">Sale</option>
+                  <option value="pg">PG</option>
                 </select>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Bedrooms
-                </label>
-                <input
-                  type="number"
-                  name="bed"
-                  value={formData.bed}
-                  onChange={handleChange}
-                  min="0"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
+            {formData.category === "pg" ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Per Person Price
+                  </label>
+                  <input
+                    type="text"
+                    name="perPersonPrice"
+                    value={formData.perPersonPrice}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter per person price"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Total Capacity
+                  </label>
+                  <input
+                    type="text"
+                    name="totalCapacity"
+                    value={formData.totalCapacity}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter total capacity"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Bathrooms
-                </label>
-                <input
-                  type="number"
-                  name="bathroom"
-                  value={formData.bathroom}
-                  onChange={handleChange}
-                  min="0"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Bedrooms
+                  </label>
+                  <input
+                    type="number"
+                    name="bed"
+                    value={formData.bed}
+                    onChange={handleChange}
+                    min="0"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Bathrooms
+                  </label>
+                  <input
+                    type="number"
+                    name="bathroom"
+                    value={formData.bathroom}
+                    onChange={handleChange}
+                    min="0"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1006,7 +1043,7 @@ const SingleProperty: React.FC = () => {
 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
+          <h1 className="text-3xl font-bold text-gray-800">
             {property.property_name}
             {role === "superadmin" && (
               <span className="ml-3 px-3 py-1 text-xs rounded-full bg-purple-100 text-purple-800 font-semibold align-middle">
@@ -1024,7 +1061,7 @@ const SingleProperty: React.FC = () => {
             >
               {property.availability ? "Available" : "Occupied"}
             </span>
-            <span className="ml-2 text-gray-600 dark:text-gray-300">
+            <span className="ml-2 text-gray-600">
               {property.city}, {property.state}
             </span>
           </div>
@@ -1214,16 +1251,37 @@ const SingleProperty: React.FC = () => {
                 <p className="mt-1 text-gray-800">{property.description}</p>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">
-                    Bedrooms
-                  </h3>
-                  <p className="mt-1 text-gray-800">{property.bed}</p>
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">Bathrooms</h3>
-                  <p className="mt-1 text-gray-800">{property.bathroom}</p>
-                </div>
+                {property.category === "pg" ? (
+                  <>
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-500">
+                        Per Person Price
+                      </h3>
+                      <p className="mt-1 text-gray-800">
+                        {property.perPersonPrice ? `₹${property.perPersonPrice}` : "N/A"}
+                      </p>
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-500">
+                        Total Capacity
+                      </h3>
+                      <p className="mt-1 text-gray-800">{property.totalCapacity || "N/A"}</p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-500">
+                        Bedrooms
+                      </h3>
+                      <p className="mt-1 text-gray-800">{property.bed}</p>
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-500">Bathrooms</h3>
+                      <p className="mt-1 text-gray-800">{property.bathroom}</p>
+                    </div>
+                  </>
+                )}
                 <div>
                   <h3 className="text-sm font-medium text-gray-500">Furnishing</h3>
                   <p className="mt-1 text-gray-800">{property.furnishing_type}</p>

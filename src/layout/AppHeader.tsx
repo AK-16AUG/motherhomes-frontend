@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 
 import { useNavigate } from "react-router";
 import { useSidebar } from "../context/SidebarContext";
-import { ThemeToggleButton } from "../components/common/ThemeToggleButton";
 import NotificationDropdown from "../components/header/NotificationDropdown";
 import UserDropdown from "../components/header/UserDropdown";
 import home from "../assets/home-icon.png";
@@ -43,14 +42,14 @@ const AppHeader: React.FC = () => {
   }, []);
 
   return (
-    <header className="sticky top-0 flex w-full bg-white border-gray-200 z-99999 dark:border-gray-800 dark:bg-gray-900 lg:border-b">
+    <header className="sticky top-0 flex w-full bg-white border-gray-200 z-99999 lg:border-b">
       <div className="flex flex-col items-center justify-between w-full lg:flex-row lg:px-6">
         {/* Top bar for mobile and desktop */}
-        <div className="flex items-center justify-between w-full gap-4 px-4 py-3 border-b border-gray-200 dark:border-gray-800 lg:border-b-0 lg:py-4">
+        <div className="flex items-center justify-between w-full gap-4 px-4 py-3 border-b border-gray-200 lg:border-b-0 lg:py-4">
           {/* Left section - Menu toggle */}
           <div className="flex items-center">
             <button
-              className="flex items-center justify-center w-11 h-11 text-gray-500 border border-gray-200 rounded-lg dark:border-gray-800 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              className="flex items-center justify-center w-11 h-11 text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
               onClick={handleToggle}
               aria-label="Toggle Sidebar"
             >
@@ -91,7 +90,7 @@ const AppHeader: React.FC = () => {
           {/* Center section - Logo */}
           <div className="flex-1 flex justify-center lg:flex-none lg:justify-start lg:ml-6">
             <h1 onClick={() => navigate("/")} className="cursor-pointer">
-              <span className="flex gap-2 items-center text-xl font-bold dark:text-white hover:opacity-80 transition-opacity">
+              <span className="flex gap-2 items-center text-xl font-bold hover:opacity-80 transition-opacity">
                 <img src={home} alt="logo" className="w-6 h-6" />
                 MotherHome
               </span>
@@ -100,7 +99,6 @@ const AppHeader: React.FC = () => {
 
           {/* Right section - Desktop actions (hidden on mobile) */}
           <div className="hidden lg:flex items-center gap-3">
-            <ThemeToggleButton />
             <NotificationDropdown />
             <UserDropdown />
           </div>
@@ -108,7 +106,7 @@ const AppHeader: React.FC = () => {
           {/* Mobile menu toggle button */}
           <button
             onClick={toggleApplicationMenu}
-            className="flex items-center justify-center w-11 h-11 text-gray-700 rounded-lg hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 transition-colors lg:hidden"
+            className="flex items-center justify-center w-11 h-11 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors lg:hidden"
           >
             <svg
               width="24"
@@ -131,10 +129,9 @@ const AppHeader: React.FC = () => {
         <div
           className={`${
             isApplicationMenuOpen ? "flex" : "hidden"
-          } items-center justify-center w-full gap-4 px-4 py-4 bg-gray-50 dark:bg-gray-800 lg:hidden`}
+          } items-center justify-center w-full gap-4 px-4 py-4 bg-gray-50 lg:hidden`}
         >
           <div className="flex items-center gap-3">
-            <ThemeToggleButton />
             <NotificationDropdown />
             <UserDropdown />
           </div>

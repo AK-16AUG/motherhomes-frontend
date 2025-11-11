@@ -22,7 +22,7 @@ interface PropertyFormData {
   description: string;
   rate: string;
   category: "rent" | "sale"|"pg";
-  amenties: string[];
+  amenities: string[];
   services: string[];
   images: File[];
   videos: string[];
@@ -71,27 +71,27 @@ const MultiSelect = ({
 
   return (
     <div className="mb-4">
-      <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
+      <label className="block text-sm font-medium mb-1 text-gray-700">
         {label}
       </label>
       <div className="relative">
         <div
-          className={`w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-2 text-sm focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none min-h-[42px] flex flex-wrap gap-2 cursor-pointer text-gray-900 dark:text-gray-100 ${
+          className={`w-full rounded border border-gray-300 bg-white p-2 text-sm focus:border-blue-500 focus:outline-none min-h-[42px] flex flex-wrap gap-2 cursor-pointer text-gray-900 ${
             isOpen
-              ? "ring-2 ring-blue-300 dark:ring-blue-400 border-blue-500 dark:border-blue-400"
+              ? "ring-2 ring-blue-300 border-blue-500"
               : ""
           }`}
           onClick={() => setIsOpen(!isOpen)}
         >
           {selected.length === 0 ? (
-            <span className="text-gray-400 dark:text-gray-500 px-2 py-1">
+            <span className="text-gray-400 px-2 py-1">
               Select {label}
             </span>
           ) : (
             selected.map((id) => (
               <span
                 key={id}
-                className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs px-2 py-1 rounded flex items-center gap-1"
+                className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded flex items-center gap-1"
               >
                 {getOptionName(id)}
                 <button
@@ -100,7 +100,7 @@ const MultiSelect = ({
                     e.stopPropagation();
                     removeOption(id);
                   }}
-                  className="text-blue-500 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
+                  className="text-blue-500 hover:text-blue-700"
                 >
                   ×
                 </button>
@@ -110,7 +110,7 @@ const MultiSelect = ({
         </div>
         <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
           <svg
-            className="w-5 h-5 text-gray-400 dark:text-gray-500"
+            className="w-5 h-5 text-gray-400"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -125,13 +125,13 @@ const MultiSelect = ({
         </div>
 
         {isOpen && (
-          <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded shadow-lg max-h-60 overflow-auto">
+          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-60 overflow-auto">
             {options.map((option) => (
               <div
                 key={option._id}
-                className={`px-4 py-2 hover:bg-blue-50 dark:hover:bg-gray-700 cursor-pointer text-gray-900 dark:text-gray-100 ${
+                className={`px-4 py-2 hover:bg-blue-50 cursor-pointer text-gray-900 ${
                   selected.includes(option._id)
-                    ? "bg-blue-100 dark:bg-gray-700"
+                    ? "bg-blue-100"
                     : ""
                 }`}
                 onClick={(e) => {
@@ -144,7 +144,7 @@ const MultiSelect = ({
                     type="checkbox"
                     checked={selected.includes(option._id)}
                     readOnly
-                    className="mr-2 accent-blue-500 dark:accent-blue-400"
+                    className="mr-2 accent-blue-500"
                   />
                   {option.name}
                 </div>
@@ -163,7 +163,7 @@ export default function AddListing() {
     description: "",
     rate: "",
     category: "rent",
-    amenties: [],
+    amenities: [],
     services: [],
     images: [],
     videos: [""],
@@ -286,7 +286,7 @@ export default function AddListing() {
       description: "",
       rate: "",
       category: "rent",
-      amenties: [],
+      amenities: [],
       services: [],
       images: [],
       videos: [""],
@@ -320,8 +320,8 @@ export default function AddListing() {
       formDataToSend.append("area", formData.area);
 
       // Append arrays
-      formData.amenties.forEach((amenityId) => {
-        formDataToSend.append("amenties[]", amenityId);
+      formData.amenities.forEach((amenityId) => {
+        formDataToSend.append("amenities[]", amenityId);
       });
 
       formData.services.forEach((serviceId) => {
@@ -373,18 +373,18 @@ if (formData.category === "pg") {
   };
 
   const inputClass =
-    "w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-3 text-sm focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500";
+    "w-full rounded border border-gray-300 bg-white p-3 text-sm focus:border-blue-500 focus:outline-none text-gray-900 placeholder-gray-400";
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
+    <div className="px-4 sm:px-6 lg:px-8 py-6 bg-gray-50 min-h-screen">
       <ToastContainer position="bottom-center" />
       <PageBreadcrumb pageTitle="Add Property" />
       <form
         onSubmit={handleSubmit}
-        className="bg-white dark:bg-gray-800 p-4 sm:p-6 md:p-8 rounded-lg shadow-lg max-w-5xl mx-auto border border-gray-200 dark:border-gray-700"
+        className="bg-white p-4 sm:p-6 md:p-8 rounded-lg shadow-lg max-w-5xl mx-auto border border-gray-200"
         encType="multipart/form-data"
       >
-        <h2 className="text-2xl font-bold mb-8 text-gray-800 dark:text-gray-100">
+        <h2 className="text-2xl font-bold mb-8 text-gray-800">
           Add New Property Listing
         </h2>
 
@@ -522,7 +522,7 @@ if (formData.category === "pg") {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-                  Latitude*
+                  Latitude
                 </label>
                 <input
                   type="text"
@@ -530,13 +530,12 @@ if (formData.category === "pg") {
                   value={formData.latitude}
                   onChange={handleChange}
                   className={inputClass}
-                  required
                   placeholder="Latitude (e.g., 28.6139)"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-                  Longitude*
+                  Longitude
                 </label>
                 <input
                   type="text"
@@ -544,7 +543,6 @@ if (formData.category === "pg") {
                   value={formData.longitude}
                   onChange={handleChange}
                   className={inputClass}
-                  required
                   placeholder="Longitude (e.g., 77.2090)"
                 />
               </div>
@@ -690,11 +688,11 @@ if (formData.category === "pg") {
                 <>
                   <MultiSelect
                     options={amenities}
-                    selected={formData.amenties}
+                    selected={formData.amenities}
                     onChange={(selected) =>
                       setFormData((prev) => ({
                         ...prev,
-                        amenties: selected,
+                        amenities: selected,
                       }))
                     }
                     label="Amenities"

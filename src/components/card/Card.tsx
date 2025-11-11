@@ -111,7 +111,7 @@ function Card({ item }: CardProps) {
               key={index}
               src={img}
               alt={`${item.title} - Image ${index + 1}`}
-              className={`w-full h-full object-cover flex-shrink-0 snap-center transition-all duration-700 ${index === currentImageIndex ? 'opacity-100 z-10 scale-100' : 'opacity-80 z-0 scale-95'}`}
+              className="w-full h-full object-cover flex-shrink-0 snap-center"
               style={{ minWidth: '100%', maxWidth: '100%' }}
               onError={(e) => {
                 (e.target as HTMLImageElement).src =
@@ -236,7 +236,7 @@ function Card({ item }: CardProps) {
               />
             </svg>
             <span className="text-xs sm:text-sm font-semibold text-gray-800">
-              {item.bedroom} BHK
+              {item.category === "pg" ? `${item.bedroom} Capacity` : `${item.bedroom} BHK`}
             </span>
           </div>
           <div className="flex items-center gap-2 sm:gap-3 bg-gray-50 px-2 sm:px-3 py-2 sm:py-2.5 border border-gray-200">

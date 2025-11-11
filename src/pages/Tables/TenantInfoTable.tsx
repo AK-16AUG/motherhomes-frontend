@@ -14,7 +14,8 @@ import { toast } from "react-toastify";
 
 type Tenant = {
   _id: string;
-  name: string;
+  name?: string; // For Normal properties
+  tenantDetails?: { name: string; email: string; user_id?: string }[]; // For PG properties
   society: string;
   flatNo: string;
   property_type: "Pg" | "Normal";
@@ -79,7 +80,8 @@ export default function MyFlatsTable() {
                 Property Type
               </TableCell>
               <TableCell isHeader className="text-left px-5 py-3">
-                Members
+                {/* Dynamic header based on property type */}
+                Tenants/Members
               </TableCell>
               <TableCell isHeader className="text-left px-5 py-3">
                 Start Date
@@ -107,7 +109,19 @@ export default function MyFlatsTable() {
                 <TableCell className="px-5 py-3">
                   {flat.property_type}
                 </TableCell>
-                <TableCell className="px-5 py-3">{flat.members}</TableCell>
+                <TableCell className="px-5 py-3">
+                  {flat.property_type === "Pg" && flat.tenantDetails ? (
+                    <div className="space-y-1">
+                      {flat.tenantDetails.map((tenant, idx) => (
+                        <div key={idx} className="text-sm">
+                          {tenant.name} ({tenant.email})
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    flat.members
+                  )}
+                </TableCell>
                 <TableCell className="px-5 py-3">
                   {new Date(flat.startDate).toLocaleDateString("en-US", {
                     year: "numeric",

@@ -38,7 +38,8 @@ interface Property {
 
 interface Tenant {
   _id: string;
-  name: string;
+  name?: string; // For Normal properties
+  tenantDetails?: { name: string; email: string; user_id?: string }[]; // For PG properties
   users: {
     _id: string;
     User_Name: string;
@@ -65,8 +66,9 @@ interface Tenant {
 }
 
 interface TenantFormData {
-  name: string;
-  users: string[];
+  name: string; // For Normal properties
+  tenantDetails: { name: string; email: string }[]; // For PG properties
+  users: string[]; // Legacy support
   property_id: string;
   flatNo: string;
   society: string;
@@ -86,6 +88,7 @@ export default function DataTable() {
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState<TenantFormData>({
     name: "",
+    tenantDetails: [],
     users: [],
     property_id: "",
     flatNo: "",
@@ -135,15 +138,18 @@ export default function DataTable() {
 
   const filteredData = data.filter((tenant) => {
     if (!tenant) return false;
+    const searchLower = searchTerm.toLowerCase();
     return (
-      (tenant?.name?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
-      (tenant.flatNo?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
-      (tenant.society?.toLowerCase() || "").includes(
-        searchTerm.toLowerCase()
-      ) ||
+      (tenant?.name?.toLowerCase() || "").includes(searchLower) ||
+      (tenant.flatNo?.toLowerCase() || "").includes(searchLower) ||
+      (tenant.society?.toLowerCase() || "").includes(searchLower) ||
       tenant.users.some((user) =>
-        user.email.toLowerCase().includes(searchTerm.toLowerCase())
-      )
+        user.email.toLowerCase().includes(searchLower)
+      ) ||
+      (tenant.tenantDetails?.some((detail) => 
+        detail.name.toLowerCase().includes(searchLower) ||
+        detail.email.toLowerCase().includes(searchLower)
+      ) || false)
     );
   });
 
@@ -158,11 +164,21 @@ export default function DataTable() {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
+    const memberCount = name === "members" ? parseInt(value) || 0 : formData.members;
+    
     setFormData((prev) => ({
       ...prev,
-      [name]: name === "members" ? parseInt(value) || 0 : value,
-      users:
-        name === "members" ? Array(parseInt(value) || 0).fill("") : prev.users,
+      [name]: name === "members" ? memberCount : value,
+      users: name === "members" && prev.property_type === "Normal" 
+        ? Array(memberCount).fill("") 
+        : prev.users,
+      tenantDetails: name === "members" && prev.property_type === "Pg"
+        ? Array(memberCount).fill({ name: "", email: "" })
+        : name === "property_type" && value === "Pg"
+        ? Array(prev.members).fill({ name: "", email: "" })
+        : name === "property_type" && value === "Normal"
+        ? []
+        : prev.tenantDetails,
     }));
   };
 
@@ -175,17 +191,41 @@ export default function DataTable() {
     }));
   };
 
+  const handleTenantDetailChange = (index: number, field: 'name' | 'email', value: string) => {
+    const updatedDetails = [...formData.tenantDetails];
+    updatedDetails[index] = { ...updatedDetails[index], [field]: value };
+    setFormData((prev) => ({
+      ...prev,
+      tenantDetails: updatedDetails,
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const tenantData = {
-        ...formData,
+      const tenantData: any = {
+        property_id: formData.property_id,
+        flatNo: formData.flatNo,
+        society: formData.society,
+        members: formData.members,
+        startDate: formData.startDate,
+        rent: formData.rent,
+        property_type: formData.property_type,
         Payments: [],
       };
+
+      if (formData.property_type === "Normal") {
+        tenantData.name = formData.name;
+        tenantData.users = formData.users;
+      } else if (formData.property_type === "Pg") {
+        tenantData.tenantDetails = formData.tenantDetails;
+      }
+
       const response = await instance.post(API_BASE_URL, tenantData);
       setData([...data, response.data]);
       setFormData({
         name: "",
+        tenantDetails: [],
         users: [],
         property_id: "",
         flatNo: "",
@@ -288,30 +328,34 @@ export default function DataTable() {
                   <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-800 mb-4">
                     <p className="text-sm text-blue-800 dark:text-blue-300 flex items-start">
                       <span className="mr-2 mt-0.5">ℹ️</span>
-                      Fill in the tenant details and member information below.
-                      All fields marked with{" "}
+                      {formData.property_type === "Pg" 
+                        ? "For PG properties, provide individual name and email for each tenant."
+                        : "For Normal properties, provide a universal tenant name and member emails."
+                      } All fields marked with{" "}
                       <span className="text-red-500">*</span> are required.
                     </p>
                   </div>
 
                   {/* Form sections with improved styling */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    {/* Tenant Name */}
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Tenant Name (Agreement signee){" "}
-                        <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                        required
-                        placeholder="Enter tenant name"
-                      />
-                    </div>
+                    {/* Tenant Name - Only for Normal properties */}
+                    {formData.property_type === "Normal" && (
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Tenant Name (Agreement signee){" "}
+                          <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          name="name"
+                          value={formData.name}
+                          onChange={handleInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                          required
+                          placeholder="Enter tenant name"
+                        />
+                      </div>
+                    )}
 
                     {/* Property Type - IMPROVED */}
                     <div>
@@ -478,14 +522,42 @@ export default function DataTable() {
                       />
                     </div>
 
-                    {/* Members Email */}
+                    {/* Members Details - Different for PG vs Normal */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Members Email <span className="text-red-500">*</span>
+                        {formData.property_type === "Pg" ? "Tenant Details" : "Members Email"} <span className="text-red-500">*</span>
                       </label>
                       <div className="space-y-3 max-h-[200px] overflow-y-auto bg-gray-50 dark:bg-gray-750 p-3 rounded-lg border border-gray-200 dark:border-gray-600">
-                        {Array.from({ length: formData.members }).map(
-                          (_, index) => (
+                        {formData.property_type === "Pg" ? (
+                          // PG: Name and Email for each tenant
+                          Array.from({ length: formData.members }).map((_, index) => (
+                            <div key={index} className="space-y-2 p-3 bg-white dark:bg-gray-700 rounded-lg border">
+                              <div className="flex items-center mb-2">
+                                <span className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-md text-xs font-medium">
+                                  Tenant {index + 1}
+                                </span>
+                              </div>
+                              <input
+                                type="text"
+                                value={formData.tenantDetails[index]?.name || ""}
+                                onChange={(e) => handleTenantDetailChange(index, 'name', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                required
+                                placeholder={`Name for tenant ${index + 1}`}
+                              />
+                              <input
+                                type="email"
+                                value={formData.tenantDetails[index]?.email || ""}
+                                onChange={(e) => handleTenantDetailChange(index, 'email', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                required
+                                placeholder={`Email for tenant ${index + 1}`}
+                              />
+                            </div>
+                          ))
+                        ) : (
+                          // Normal: Just emails
+                          Array.from({ length: formData.members }).map((_, index) => (
                             <div key={index} className="flex items-center">
                               <span className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-md text-xs font-medium mr-2">
                                 {index + 1}
@@ -493,15 +565,13 @@ export default function DataTable() {
                               <input
                                 type="email"
                                 value={formData.users[index] || ""}
-                                onChange={(e) =>
-                                  handleUserEmailChange(index, e.target.value)
-                                }
+                                onChange={(e) => handleUserEmailChange(index, e.target.value)}
                                 className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                                 required
                                 placeholder={`Email for member ${index + 1}`}
                               />
                             </div>
-                          )
+                          ))
                         )}
                       </div>
                     </div>
@@ -591,7 +661,10 @@ export default function DataTable() {
                   >
                     <td className="py-2 px-4 flex items-center gap-2 whitespace-nowrap">
                       <span className="font-medium text-gray-800 dark:text-gray-200 truncate max-w-[120px]">
-                        {tenant?.name}
+                        {tenant.property_type === "Normal" 
+                          ? tenant?.name 
+                          : tenant.tenantDetails?.map(t => t.name).join(", ") || "Multiple Tenants"
+                        }
                       </span>
                     </td>
                     <td className="py-2 px-4 whitespace-nowrap text-gray-700 dark:text-gray-300">

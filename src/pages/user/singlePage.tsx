@@ -1025,7 +1025,10 @@ const SingleListing: React.FC = () => {
                       <div className="flex items-center space-x-3">
                         <BedDouble className="w-6 h-6 text-yellow-600" />
                         <span className="text-lg font-medium text-gray-800">
-                          {property?.bed || "N/A"} BHK
+                          {property?.category === "pg" 
+                            ? `${property?.totalCapacity || "N/A"} Capacity`
+                            : `${property?.bed || "N/A"} BHK`
+                          }
                         </span>
                       </div>
                       <span className="text-xl font-bold text-yellow-600">
@@ -1057,19 +1060,22 @@ const SingleListing: React.FC = () => {
                         {property?.furnishing_type || "N/A"}
                       </span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Per Person Rent For Pg</span>
-                      <span className="font-medium">
-                        {property?.perPersonPrice|| "N/A"}
-                      </span>
-                    </div> 
- 
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Total Capacity:</span>
-                      <span className="font-medium">
-                        {property?.totalCapacity || "N/A"}
-                      </span>
-                    </div>
+                    {property?.category === "pg" && (
+                      <>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Per Person Price:</span>
+                          <span className="font-medium">
+                            {property?.perPersonPrice ? `₹${property.perPersonPrice}` : "N/A"}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Total Capacity:</span>
+                          <span className="font-medium">
+                            {property?.totalCapacity || "N/A"}
+                          </span>
+                        </div>
+                      </>
+                    )}
                     <div className="flex justify-between">
                       <span className="text-gray-600">Area:</span>
                       <span className="font-medium">
