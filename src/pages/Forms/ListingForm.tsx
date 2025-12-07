@@ -30,6 +30,7 @@ interface PropertyFormData {
   city: string;
   state: string;
   address: string;
+  flat_no: string;
   bed: number;
   bathroom: number;
   area: string;
@@ -171,6 +172,7 @@ export default function AddListing() {
     city: "",
     state: "",
     address: "",
+    flat_no: "",
     bed: 1,
     bathroom: 1,
     area: "",
@@ -294,6 +296,7 @@ export default function AddListing() {
       city: "",
       state: "",
       address: "",
+      flat_no: "",
       bed: 1,
       bathroom: 1,
       area: "",
@@ -337,6 +340,9 @@ export default function AddListing() {
       formDataToSend.append("availability", String(formData.availability));
       formDataToSend.append("latitude", formData.latitude);
       formDataToSend.append("longitude", formData.longitude);
+      if (formData.flat_no) {
+        formDataToSend.append("flat_no", formData.flat_no);
+      }
 if (formData.category === "pg") {
   formDataToSend.append("perPersonPrice", formData.perPersonPrice || "");
   formDataToSend.append("totalCapacity", formData.totalCapacity || "");
@@ -545,6 +551,22 @@ if (formData.category === "pg") {
                   className={inputClass}
                   placeholder="Longitude (e.g., 77.2090)"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                  Flat No (Admin Only)
+                </label>
+                <input
+                  type="text"
+                  name="flat_no"
+                  value={formData.flat_no}
+                  onChange={handleChange}
+                  className={inputClass}
+                  placeholder="e.g., A-101, B-205"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  This information is for admin tracking only and will not be visible to users
+                </p>
               </div>
             </div>
           </div>

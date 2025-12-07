@@ -30,6 +30,7 @@ interface Property {
   status?: "Available" | "Unavailable" | "Occupied";
   createdAt: string;
   totalCapacity?: string;
+  flat_no?: string;
 }
 
 const CATEGORY_BADGE_MAP = {
@@ -277,6 +278,12 @@ export default function ListingTable() {
                 isHeader
                 className="text-left px-5 py-3 text-gray-900 font-medium"
               >
+                Flat No
+              </TableCell>
+              <TableCell
+                isHeader
+                className="text-left px-5 py-3 text-gray-900 font-medium"
+              >
                 Details
               </TableCell>
               <TableCell
@@ -339,6 +346,11 @@ export default function ListingTable() {
                         {property.state}
                       </span>
                     </div>
+                  </TableCell>
+                  <TableCell className="text-left px-5 py-3 text-gray-900">
+                    <span className="text-sm text-gray-900">
+                      {property.flat_no || "N/A"}
+                    </span>
                   </TableCell>
                   <TableCell className="text-left px-5 py-3 text-gray-900">
                     <div className="flex gap-2">

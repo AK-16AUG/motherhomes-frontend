@@ -34,6 +34,7 @@ import MyFlatsTable from "./pages/Tables/TenantInfoTable";
 import AdminTable from "./pages/Tables/AdminTable";
 import { LoadingProvider } from "./context/LoadingContext";
 import RegisteredUserTable from "./pages/Tables/RegisteredUserTable";
+import InquiryLeadsTable from "./pages/Tables/InquiryLeadsTable";
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -142,6 +143,14 @@ export default function App() {
               element={
                 <ProtectedRoute allowedRoles={["admin", "superadmin"]}>
                   <LeadsTable />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/inquiry-leads"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "superadmin"]}>
+                  <InquiryLeadsTable />
                 </ProtectedRoute>
               }
             />

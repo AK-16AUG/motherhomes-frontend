@@ -33,6 +33,24 @@ const PropertiesSection: React.FC = () => {
       image:
         "https://static.india.com/wp-content/uploads/2023/08/Greater-Noida-Freepik.jpg",
     },
+    {
+      name: "Gurugram",
+      properties: 3,
+      image:
+        "https://i.ytimg.com/vi/JaQVOX3inNY/maxresdefault.jpg",
+    },
+    {
+      name: "Dehradun",
+      properties: 5,
+      image:
+        "https://i.ytimg.com/vi/hE1hWY9ROI0/hq720.jpg?sqp=-oaymwEhCK4FEIIDSFryq4qpAxMIARUAAAAAGAElAADIQj0AgKJD&rs=AOn4CLCwE1PtBwiv_QW4wjsuQWU37OtcbA",
+    },
+    {
+      name: "Varanasi",
+      properties: 4,
+      image:
+        "https://upload.wikimedia.org/wikipedia/commons/0/04/Ahilya_Ghat_by_the_Ganges%2C_Varanasi.jpg",
+    }
   ];
 
   const handleCardClick = (cityName: string) => {

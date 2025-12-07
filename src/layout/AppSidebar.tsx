@@ -102,6 +102,13 @@ const AppSidebar: React.FC = () => {
       ],
     },
     {
+      name: "Inquiry Leads",
+      icon: <Table className="w-5 h-5" />,
+      subItems: [
+        { name: "Inquiry Leads", path: "/inquiry-leads", pro: false },
+      ],
+    },
+    {
       name: "Flats Details",
       icon: <Home className="w-5 h-5" />,
       subItems: [{ name: " Tenant Info", path: "/tenantinfo", pro: false }],
