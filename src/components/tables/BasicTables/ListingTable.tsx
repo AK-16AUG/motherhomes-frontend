@@ -412,6 +412,13 @@ export default function ListingTable() {
                   </TableCell>
                   <TableCell className="text-left px-5 py-3 text-gray-900">
                     <div className="flex gap-2">
+                      <Link
+                        to={`/edit-listing/${property._id}`}
+                        className="p-1 text-gray-500 hover:text-blue-600 hover:bg-gray-50 rounded transition-colors"
+                        title="Edit property"
+                      >
+                        <Pencil size={16} />
+                      </Link>
                       <button
                         onClick={() => handleDelete(property._id)}
                         className="p-1 text-gray-500 hover:text-red-600 hover:bg-gray-50 rounded transition-colors"

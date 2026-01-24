@@ -4,6 +4,7 @@ import instance from "../../utils/Axios/Axios";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { LoadingButton } from "../../components/ui/loading";
+import { useParams, useNavigate } from "react-router-dom";
 
 interface Amenity {
   _id: string;
@@ -21,10 +22,11 @@ interface PropertyFormData {
   property_name: string;
   description: string;
   rate: string;
-  category: "rent" | "sale"|"pg";
+  category: "rent" | "sale" | "pg";
   amenities: string[];
   services: string[];
   images: File[];
+  existingImages: string[];
   videos: string[];
   furnishing_type: "Raw" | "Semi-furnished" | "Fully furnished";
   city: string;
@@ -78,16 +80,12 @@ const MultiSelect = ({
       <div className="relative">
         <div
           className={`w-full rounded border border-gray-300 bg-white p-2 text-sm focus:border-blue-500 focus:outline-none min-h-[42px] flex flex-wrap gap-2 cursor-pointer text-gray-900 ${
-            isOpen
-              ? "ring-2 ring-blue-300 border-blue-500"
-              : ""
+            isOpen ? "ring-2 ring-blue-300 border-blue-500" : ""
           }`}
           onClick={() => setIsOpen(!isOpen)}
         >
           {selected.length === 0 ? (
-            <span className="text-gray-400 px-2 py-1">
-              Select {label}
-            </span>
+            <span className="text-gray-400 px-2 py-1">Select {label}</span>
           ) : (
             selected.map((id) => (
               <span
@@ -131,9 +129,7 @@ const MultiSelect = ({
               <div
                 key={option._id}
                 className={`px-4 py-2 hover:bg-blue-50 cursor-pointer text-gray-900 ${
-                  selected.includes(option._id)
-                    ? "bg-blue-100"
-                    : ""
+                  selected.includes(option._id) ? "bg-blue-100" : ""
                 }`}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -158,7 +154,11 @@ const MultiSelect = ({
   );
 };
 
-export default function AddListing() {
+export default function ListingForm() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const isEditMode = Boolean(id);
+
   const [formData, setFormData] = useState<PropertyFormData>({
     property_name: "",
     description: "",
@@ -167,6 +167,7 @@ export default function AddListing() {
     amenities: [],
     services: [],
     images: [],
+    existingImages: [],
     videos: [""],
     furnishing_type: "Raw",
     city: "",
@@ -179,8 +180,8 @@ export default function AddListing() {
     availability: true,
     latitude: "",
     longitude: "",
-    perPersonPrice:'',
-  totalCapacity: ""
+    perPersonPrice: "",
+    totalCapacity: "",
   });
 
   const [amenities, setAmenities] = useState<Amenity[]>([]);
@@ -188,7 +189,6 @@ export default function AddListing() {
   const [loading, setLoading] = useState(false);
   const [optionsLoading, setOptionsLoading] = useState(true);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [imageTooLarge, setImageTooLarge] = useState(false);
 
   useEffect(() => {
@@ -207,6 +207,45 @@ export default function AddListing() {
 
     fetchOptions();
   }, []);
+
+  useEffect(() => {
+    if (isEditMode && id) {
+      const fetchProperty = async () => {
+        try {
+          const response = await instance.get(`/property/${id}`);
+          const data = response.data;
+          setFormData({
+            property_name: data.property_name,
+            description: data.description,
+            rate: data.rate,
+            category: data.category,
+            amenities: data.amenities.map((a: any) => a._id || a),
+            services: data.services.map((s: any) => s._id || s),
+            images: [],
+            existingImages: data.images || [],
+            videos: data.videos && data.videos.length > 0 ? data.videos : [""],
+            furnishing_type: data.furnishing_type,
+            city: data.city,
+            state: data.state,
+            address: data.address,
+            flat_no: data.flat_no || "",
+            bed: data.bed,
+            bathroom: data.bathroom,
+            area: data.area,
+            availability: data.availability,
+            latitude: data.latitude || "",
+            longitude: data.longitude || "",
+            perPersonPrice: data.perPersonPrice || "",
+            totalCapacity: data.totalCapacity || "",
+          });
+        } catch (error) {
+          console.error("Error fetching property details:", error);
+          toast.error("Failed to fetch property details");
+        }
+      };
+      fetchProperty();
+    }
+  }, [isEditMode, id]);
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -229,13 +268,12 @@ export default function AddListing() {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const newFiles = Array.from(e.target.files!);
-      const totalImages = formData.images.length + newFiles.length;
-      // Check for image count limit
+      const totalImages =
+        formData.images.length + formData.existingImages.length + newFiles.length;
       if (totalImages > 10) {
-        toast.error("Image limit exceeded, please remove some images.");
+        toast.error("Image limit exceeded (max 10), please remove some images.");
         return;
       }
-      // Check for per-image size limit
       const tooLarge = newFiles.some((file) => file.size > 10 * 1024 * 1024);
       if (tooLarge) {
         setImageTooLarge(true);
@@ -253,14 +291,17 @@ export default function AddListing() {
   const removeImage = (index: number) => {
     setFormData((prev) => {
       const newImages = prev.images.filter((_, i) => i !== index);
-      // Check if any remaining image is too large
       const tooLarge = newImages.some((file) => file.size > 10 * 1024 * 1024);
       setImageTooLarge(tooLarge);
-      return {
-        ...prev,
-        images: newImages,
-      };
+      return { ...prev, images: newImages };
     });
+  };
+
+  const removeExistingImage = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      existingImages: prev.existingImages.filter((_, i) => i !== index),
+    }));
   };
 
   const handleVideoChange = (idx: number, value: string) => {
@@ -282,30 +323,6 @@ export default function AddListing() {
     }));
   };
 
-  const resetForm = () => {
-    setFormData({
-      property_name: "",
-      description: "",
-      rate: "",
-      category: "rent",
-      amenities: [],
-      services: [],
-      images: [],
-      videos: [""],
-      furnishing_type: "Raw",
-      city: "",
-      state: "",
-      address: "",
-      flat_no: "",
-      bed: 1,
-      bathroom: 1,
-      area: "",
-      availability: true,
-      latitude: "",
-      longitude: "",
-    });
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -314,7 +331,6 @@ export default function AddListing() {
     try {
       const formDataToSend = new FormData();
 
-      // Append all text fields
       formDataToSend.append("property_name", formData.property_name);
       formDataToSend.append("description", formData.description);
       formDataToSend.append("rate", formData.rate);
@@ -322,7 +338,6 @@ export default function AddListing() {
       formDataToSend.append("address", formData.address);
       formDataToSend.append("area", formData.area);
 
-      // Append arrays
       formData.amenities.forEach((amenityId) => {
         formDataToSend.append("amenities[]", amenityId);
       });
@@ -331,7 +346,6 @@ export default function AddListing() {
         formDataToSend.append("services[]", serviceId);
       });
 
-      // Append other fields
       formDataToSend.append("furnishing_type", formData.furnishing_type);
       formDataToSend.append("city", formData.city);
       formDataToSend.append("state", formData.state);
@@ -343,35 +357,77 @@ export default function AddListing() {
       if (formData.flat_no) {
         formDataToSend.append("flat_no", formData.flat_no);
       }
-if (formData.category === "pg") {
-  formDataToSend.append("perPersonPrice", formData.perPersonPrice || "");
-  formDataToSend.append("totalCapacity", formData.totalCapacity || "");
-}
+      if (formData.category === "pg") {
+        formDataToSend.append("perPersonPrice", formData.perPersonPrice || "");
+        formDataToSend.append("totalCapacity", formData.totalCapacity || "");
+      }
 
-      // Append videos
       formData.videos.forEach((video) => {
         if (video.trim() !== "") {
           formDataToSend.append("videos[]", video);
         }
       });
 
-      // Append images
       formData.images.forEach((image) => {
         formDataToSend.append("images", image);
       });
 
-      await instance.post("/property", formDataToSend, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      // Handle existing images for update
+      if (isEditMode) {
+         // The backend expects existingImages to be passed.
+         // Since FormData supports strings, we can append them. 
+         // Most backends (like your propertyRouter) check req.body.existingImages
+         // If using FormData, we might need to append them individually or as JSON string depending on backend parsing.
+         // Based on your backend code: 
+         // if (typeof req.body.existingImages === 'string') JSON.parse...
+         // else if (Array.isArray(req.body.existingImages))...
+         // So appending multiple "existingImages" keys works if multer handles it, OR we can JSON stringify it.
+         // To be safe and matching the backend logic:
+         formData.existingImages.forEach((imgUrl) => {
+             formDataToSend.append("existingImages", imgUrl);
+         });
+      }
 
-      resetForm();
-      setSuccess("Property created successfully!");
-      toast.success("Property created successfully!")
+      if (isEditMode && id) {
+        await instance.put(`/property/${id}`, formDataToSend, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+        toast.success("Property updated successfully!");
+        navigate("/alllisting"); // Redirect to listing table after update
+      } else {
+        await instance.post("/property", formDataToSend, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+        toast.success("Property created successfully!");
+        // Optional: clear form or redirect
+         setFormData({
+            property_name: "",
+            description: "",
+            rate: "",
+            category: "rent",
+            amenities: [],
+            services: [],
+            images: [],
+            existingImages: [],
+            videos: [""],
+            furnishing_type: "Raw",
+            city: "",
+            state: "",
+            address: "",
+            flat_no: "",
+            bed: 1,
+            bathroom: 1,
+            area: "",
+            availability: true,
+            latitude: "",
+            longitude: "",
+            perPersonPrice: "",
+            totalCapacity: "",
+          });
+      }
     } catch (err: any) {
-      toast.error(err.response?.data?.error || "Failed to create property")
-      setError(err.response?.data?.error || "Failed to create property");
+      toast.error(err.response?.data?.error || "Failed to save property");
+      setError(err.response?.data?.error || "Failed to save property");
       console.error("Submission error:", err);
     } finally {
       setLoading(false);
@@ -384,21 +440,15 @@ if (formData.category === "pg") {
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6 bg-gray-50 min-h-screen">
       <ToastContainer position="bottom-center" />
-      <PageBreadcrumb pageTitle="Add Property" />
+      <PageBreadcrumb pageTitle={isEditMode ? "Edit Property" : "Add Property"} />
       <form
         onSubmit={handleSubmit}
         className="bg-white p-4 sm:p-6 md:p-8 rounded-lg shadow-lg max-w-5xl mx-auto border border-gray-200"
         encType="multipart/form-data"
       >
         <h2 className="text-2xl font-bold mb-8 text-gray-800">
-          Add New Property Listing
+          {isEditMode ? "Edit Property Listing" : "Add New Property Listing"}
         </h2>
-
-        {success && (
-          <div className="mb-6 p-4 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-lg border border-green-200 dark:border-green-700">
-            {success}
-          </div>
-        )}
 
         {error && (
           <div className="mb-6 p-4 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded-lg border border-red-200 dark:border-red-700">
@@ -638,39 +688,39 @@ if (formData.category === "pg") {
                   required
                 />
               </div>
-{formData.category === "pg" && (
-  <>
-    <div>
-      <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-        Per Person Price*
-      </label>
-      <input
-        type="text"
-        name="perPersonPrice"
-        value={formData.perPersonPrice || ""}
-        onChange={handleChange}
-        className={inputClass}
-        required
-        placeholder="Enter per person price"
-      />
-    </div>
+              {formData.category === "pg" && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                      Per Person Price*
+                    </label>
+                    <input
+                      type="text"
+                      name="perPersonPrice"
+                      value={formData.perPersonPrice || ""}
+                      onChange={handleChange}
+                      className={inputClass}
+                      required
+                      placeholder="Enter per person price"
+                    />
+                  </div>
 
-    <div>
-      <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-        Total Capacity*
-      </label>
-      <input
-        type="text"
-        name="totalCapacity"
-        value={formData.totalCapacity || ""}
-        onChange={handleChange}
-        className={inputClass}
-        required
-        placeholder="Enter total capacity"
-      />
-    </div>
-  </>
-)}
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                      Total Capacity*
+                    </label>
+                    <input
+                      type="text"
+                      name="totalCapacity"
+                      value={formData.totalCapacity || ""}
+                      onChange={handleChange}
+                      className={inputClass}
+                      required
+                      placeholder="Enter total capacity"
+                    />
+                  </div>
+                </>
+              )}
 
               <div className="flex items-center gap-3">
                 <input
@@ -752,17 +802,53 @@ if (formData.category === "pg") {
                 accept="image/*"
                 onChange={handleImageChange}
                 className="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:border file:border-gray-300 dark:file:border-gray-600 file:rounded file:bg-gray-100 dark:file:bg-gray-700 file:text-gray-700 dark:file:text-gray-300 hover:file:bg-gray-200 dark:hover:file:bg-gray-600"
-                disabled={formData.images.length >= 10}
+                disabled={
+                  formData.images.length + formData.existingImages.length >= 10
+                }
               />
+              
+              {/* Existing Images */}
+               {formData.existingImages.length > 0 && (
+                <div className="mt-4">
+                  <h4 className="text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                    Existing Images:
+                  </h4>
+                  <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {formData.existingImages.map((imgUrl, idx) => (
+                      <li
+                        key={`existing-${idx}`}
+                        className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded p-2 flex flex-col"
+                      >
+                        <div className="w-full h-32 mb-2 overflow-hidden rounded">
+                          <img
+                            src={imgUrl}
+                            alt={`Existing ${idx}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeExistingImage(idx)}
+                          className="text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 text-sm self-end"
+                        >
+                          Remove
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* New Images */}
               {formData.images.length > 0 && (
                 <div className="mt-4">
                   <h4 className="text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-                    Selected Images:
+                    New Images:
                   </h4>
                   <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                     {formData.images.map((img, idx) => (
                       <li
-                        key={idx}
+                        key={`new-${idx}`}
                         className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded p-2 flex flex-col"
                       >
                         <div className="w-full h-32 mb-2 overflow-hidden rounded">
@@ -792,7 +878,8 @@ if (formData.category === "pg") {
                   </ul>
                 </div>
               )}
-              {formData.images.length >= 10 && (
+             
+              {formData.images.length + formData.existingImages.length >= 10 && (
                 <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                   Maximum 10 images reached
                 </p>

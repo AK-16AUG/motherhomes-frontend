@@ -59,7 +59,7 @@ export default function App() {
       <Router>
         <ScrollToTop />
         <Routes>
-          
+
           <Route path="/" element={<HomePage />} />
           <Route path="/signin" element={<SignIn />} />
           <Route path="/resetpass" element={<Reset />} />
@@ -132,6 +132,14 @@ export default function App() {
             />
             <Route
               path="/addlisting"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "superadmin"]}>
+                  <Addlisting />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/edit-listing/:id"
               element={
                 <ProtectedRoute allowedRoles={["admin", "superadmin"]}>
                   <Addlisting />
