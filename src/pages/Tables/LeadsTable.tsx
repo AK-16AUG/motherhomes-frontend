@@ -37,6 +37,7 @@ interface LeadFormData {
   source?: string;
   priority?: "low" | "medium" | "high";
   matchedProperties: string[];
+  location?: string;
 }
 
 const API_BASE_URL = "/leads";
@@ -62,6 +63,7 @@ export default function LeadsTable() {
     source: "website",
     priority: "medium",
     matchedProperties: [],
+    location: "",
   });
   const [data, setData] = useState<any[]>([]);
   const [totalEntries, setTotalEntries] = useState(0);
@@ -272,9 +274,8 @@ export default function LeadsTable() {
         `"${lead.status || ""}"`,
         `"${lead.source || ""}"`,
         `"${lead.priority || ""}"`,
-        `"${
-          lead.matchedProperties?.map((p: any) => p.property_name).join(", ") ||
-          ""
+        `"${lead.matchedProperties?.map((p: any) => p.property_name).join(", ") ||
+        ""
         }"`,
         `"${lead.notes || ""}"`,
       ].join(",");
@@ -495,6 +496,20 @@ export default function LeadsTable() {
                         <option value="high">High</option>
                       </select>
                     </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Location
+                      </label>
+                      <input
+                        type="text"
+                        name="location"
+                        value={formData.location || ""}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="e.g. New Delhi"
+                      />
+                    </div>
                   </div>
 
                   <div>
@@ -505,11 +520,10 @@ export default function LeadsTable() {
                       {properties.map((property) => (
                         <div
                           key={property._id}
-                          className={`p-2 border rounded cursor-pointer transition-colors ${
-                            formData.matchedProperties.includes(property._id)
-                              ? "bg-blue-50 dark:bg-blue-900/30 border-blue-500 dark:border-blue-400"
-                              : "border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
-                          }`}
+                          className={`p-2 border rounded cursor-pointer transition-colors ${formData.matchedProperties.includes(property._id)
+                            ? "bg-blue-50 dark:bg-blue-900/30 border-blue-500 dark:border-blue-400"
+                            : "border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                            }`}
                           onClick={() => handlePropertySelect(property._id)}
                         >
                           <div className="flex items-center gap-2">
@@ -518,7 +532,7 @@ export default function LeadsTable() {
                               checked={formData.matchedProperties.includes(
                                 property._id
                               )}
-                              onChange={() => {}}
+                              onChange={() => { }}
                               className="hidden"
                             />
                             <span className="text-gray-900 dark:text-gray-100">
@@ -687,11 +701,10 @@ export default function LeadsTable() {
                       {properties.map((property) => (
                         <div
                           key={property._id}
-                          className={`p-2 border rounded cursor-pointer transition-colors ${
-                            formData.matchedProperties.includes(property._id)
-                              ? "bg-blue-50 dark:bg-blue-900/30 border-blue-500 dark:border-blue-400"
-                              : "border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
-                          }`}
+                          className={`p-2 border rounded cursor-pointer transition-colors ${formData.matchedProperties.includes(property._id)
+                            ? "bg-blue-50 dark:bg-blue-900/30 border-blue-500 dark:border-blue-400"
+                            : "border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                            }`}
                           onClick={() => handlePropertySelect(property._id)}
                         >
                           <div className="flex items-center gap-2">
@@ -700,7 +713,7 @@ export default function LeadsTable() {
                               checked={formData.matchedProperties.includes(
                                 property._id
                               )}
-                              onChange={() => {}}
+                              onChange={() => { }}
                               className="hidden"
                             />
                             <span className="text-gray-900 dark:text-gray-100">
@@ -793,10 +806,12 @@ export default function LeadsTable() {
             <thead className="text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
               <tr>
                 <th className="py-2 px-4 whitespace-nowrap">Contact Info</th>
-                <th className="py-2 px-4 whitespace-nowrap">Properties</th>
+                <th className="py-2 px-4 whitespace-nowrap">Interest</th>
+                <th className="py-2 px-4 whitespace-nowrap">Location</th>
                 <th className="py-2 px-4 whitespace-nowrap">Status</th>
                 <th className="py-2 px-4 whitespace-nowrap">Source</th>
                 <th className="py-2 px-4 whitespace-nowrap">Priority</th>
+                <th className="py-2 px-4 whitespace-nowrap">Date</th>
                 <th className="py-2 px-4 whitespace-nowrap">Actions</th>
               </tr>
             </thead>
@@ -845,28 +860,41 @@ export default function LeadsTable() {
                       </div>
                     </td>
                     <td className="py-2 px-4">
-                      <div className="flex flex-wrap gap-1">
-                        {lead.matchedProperties?.map((prop: any) => (
-                          <span
-                            key={prop._id}
-                            className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-xs rounded text-gray-900 dark:text-gray-100"
-                          >
-                            {prop.property_name}
+                      <div className="text-sm">
+                        {lead.matchedProperties &&
+                          lead.matchedProperties.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {lead.matchedProperties.map((prop: any) => (
+                              <span
+                                key={prop._id || prop}
+                                className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs px-2 py-0.5 rounded-full"
+                              >
+                                {prop.property_name || "Property"}
+                              </span>
+                            ))}
+                          </div>
+                        ) : lead.searchQuery ? (
+                          <span className="text-gray-600 dark:text-gray-400 italic text-xs">
+                            "{lead.searchQuery}"
                           </span>
-                        ))}
+                        ) : (
+                          <span className="text-gray-400 text-xs">No specific interest</span>
+                        )}
                       </div>
+                    </td>
+                    <td className="py-2 px-4 whitespace-nowrap text-sm">
+                      {lead.location || "-"}
                     </td>
                     <td className="py-2 px-4 whitespace-nowrap">
                       <span
-                        className={`px-2 py-1 rounded-full text-xs ${
-                          lead.status === "new"
+                        className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${lead.status === "new"
                             ? "bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200"
                             : lead.status === "contacted"
-                            ? "bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200"
-                            : lead.status === "converted"
-                            ? "bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200"
-                            : "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200"
-                        }`}
+                              ? "bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200"
+                              : lead.status === "converted"
+                                ? "bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200"
+                                : "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                          }`}
                       >
                         {lead.status}
                       </span>
@@ -876,16 +904,18 @@ export default function LeadsTable() {
                     </td>
                     <td className="py-2 px-4 whitespace-nowrap">
                       <span
-                        className={`px-2 py-1 rounded-full text-xs ${
-                          lead.priority === "high"
+                        className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${lead.priority === "high"
                             ? "bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-200"
                             : lead.priority === "medium"
-                            ? "bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200"
-                            : "bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200"
-                        }`}
+                              ? "bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200"
+                              : "bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200"
+                          }`}
                       >
                         {lead.priority}
                       </span>
+                    </td>
+                    <td className="py-2 px-4 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
+                      {lead.timestamp ? new Date(lead.timestamp).toLocaleDateString() : lead.createdAt ? new Date(lead.createdAt).toLocaleDateString() : "-"}
                     </td>
                     <td className="py-2 px-4 flex gap-2 flex-wrap">
                       <button
@@ -897,11 +927,10 @@ export default function LeadsTable() {
                       </button>
                       <button
                         onClick={() => updateLeadStatus(lead._id, "contacted")}
-                        className={`flex items-center gap-1 text-sm px-2 py-1 rounded whitespace-nowrap transition-colors ${
-                          lead.status === "contacted"
-                            ? "bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200"
-                            : "bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100"
-                        }`}
+                        className={`flex items-center gap-1 text-sm px-2 py-1 rounded whitespace-nowrap transition-colors ${lead.status === "contacted"
+                          ? "bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200"
+                          : "bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100"
+                          }`}
                         disabled={lead.status === "contacted"}
                       >
                         <Phone size={14} />
@@ -909,11 +938,10 @@ export default function LeadsTable() {
                       </button>
                       <button
                         onClick={() => updateLeadStatus(lead._id, "converted")}
-                        className={`flex items-center gap-1 text-sm px-2 py-1 rounded whitespace-nowrap transition-colors ${
-                          lead.status === "converted"
-                            ? "bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200"
-                            : "bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100"
-                        }`}
+                        className={`flex items-center gap-1 text-sm px-2 py-1 rounded whitespace-nowrap transition-colors ${lead.status === "converted"
+                          ? "bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200"
+                          : "bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100"
+                          }`}
                         disabled={lead.status === "converted"}
                       >
                         <CheckCircle size={14} />
@@ -921,11 +949,10 @@ export default function LeadsTable() {
                       </button>
                       <button
                         onClick={() => updateLeadStatus(lead._id, "archived")}
-                        className={`flex items-center gap-1 text-sm px-2 py-1 rounded whitespace-nowrap transition-colors ${
-                          lead.status === "archived"
-                            ? "bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200"
-                            : "bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100"
-                        }`}
+                        className={`flex items-center gap-1 text-sm px-2 py-1 rounded whitespace-nowrap transition-colors ${lead.status === "archived"
+                          ? "bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200"
+                          : "bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100"
+                          }`}
                         disabled={lead.status === "archived"}
                       >
                         <Archive size={14} />
@@ -953,14 +980,13 @@ export default function LeadsTable() {
           <p className="whitespace-nowrap">
             {isFiltering
               ? `Found ${filteredData.length} matching results`
-              : `Showing ${
-                  totalEntries === 0
-                    ? 0
-                    : (currentPage - 1) * entriesPerPage + 1
-                } to ${Math.min(
-                  currentPage * entriesPerPage,
-                  totalEntries
-                )} of ${totalEntries} entries`}
+              : `Showing ${totalEntries === 0
+                ? 0
+                : (currentPage - 1) * entriesPerPage + 1
+              } to ${Math.min(
+                currentPage * entriesPerPage,
+                totalEntries
+              )} of ${totalEntries} entries`}
           </p>
 
           {/* Hide pagination when filtering */}
@@ -1002,11 +1028,10 @@ export default function LeadsTable() {
                   pages.push(
                     <button
                       key={i}
-                      className={`px-3 py-1 rounded border border-gray-300 dark:border-gray-600 transition-colors ${
-                        currentPage === i
-                          ? "bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 border-blue-300 dark:border-blue-600"
-                          : "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-600"
-                      }`}
+                      className={`px-3 py-1 rounded border border-gray-300 dark:border-gray-600 transition-colors ${currentPage === i
+                        ? "bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 border-blue-300 dark:border-blue-600"
+                        : "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-600"
+                        }`}
                       onClick={() => setCurrentPage(i)}
                       disabled={loading}
                     >
