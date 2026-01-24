@@ -32,7 +32,7 @@ interface LeadFormData {
     phone?: string;
     email?: string;
   };
-  status: "new" | "contacted" | "converted" | "archived";
+  status: "new" | "inquiry" | "contacted" | "converted" | "archived";
   notes?: string;
   source?: string;
   priority?: "low" | "medium" | "high";
@@ -69,6 +69,7 @@ export default function LeadsTable() {
   const [totalEntries, setTotalEntries] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [properties, setProperties] = useState<Property[]>([]);
+  const [propertySearch, setPropertySearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -466,6 +467,24 @@ export default function LeadsTable() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Status
+                      </label>
+                      <select
+                        name="status"
+                        value={formData.status}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="new">New</option>
+                        <option value="inquiry">Inquiry</option>
+                        <option value="contacted">Contacted</option>
+                        <option value="converted">Converted</option>
+                        <option value="archived">Archived</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Source
                       </label>
                       <select
@@ -516,34 +535,75 @@ export default function LeadsTable() {
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Matched Properties
                     </label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                      {properties.map((property) => (
-                        <div
-                          key={property._id}
-                          className={`p-2 border rounded cursor-pointer transition-colors ${formData.matchedProperties.includes(property._id)
-                            ? "bg-blue-50 dark:bg-blue-900/30 border-blue-500 dark:border-blue-400"
-                            : "border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
-                            }`}
-                          onClick={() => handlePropertySelect(property._id)}
-                        >
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              checked={formData.matchedProperties.includes(
-                                property._id
-                              )}
-                              onChange={() => { }}
-                              className="hidden"
-                            />
-                            <span className="text-gray-900 dark:text-gray-100">
-                              {property.property_name}
+
+                    {/* Selected Properties Chips */}
+                    {formData.matchedProperties.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {properties
+                          .filter((p) => formData.matchedProperties.includes(p._id))
+                          .map((p) => (
+                            <span
+                              key={p._id}
+                              className="flex items-center gap-1 bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 px-2 py-1 rounded text-sm"
+                            >
+                              <span className="truncate max-w-[150px]">{p.property_name}</span>
+                              <button
+                                type="button"
+                                onClick={() => handlePropertySelect(p._id)}
+                                className="hover:text-blue-600 dark:hover:text-blue-300"
+                              >
+                                <X size={14} />
+                              </button>
                             </span>
-                            <span className="text-xs text-gray-500 dark:text-gray-400 ml-auto">
-                              ₹{property.rate}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
+                          ))}
+                      </div>
+                    )}
+
+                    {/* Search and Selection List */}
+                    <div className="border border-gray-300 dark:border-gray-600 rounded-md overflow-hidden bg-white dark:bg-gray-700">
+                      <div className="relative border-b border-gray-200 dark:border-gray-600">
+                        <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                        <input
+                          type="text"
+                          placeholder="Search properties to add..."
+                          className="w-full pl-9 pr-3 py-2 bg-transparent text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none"
+                          value={propertySearch}
+                          onChange={(e) => setPropertySearch(e.target.value)}
+                        />
+                      </div>
+
+                      <div className="max-h-48 overflow-y-auto p-1">
+                        {properties
+                          .filter(
+                            (p) =>
+                              !formData.matchedProperties.includes(p._id) &&
+                              p.property_name.toLowerCase().includes(propertySearch.toLowerCase())
+                          )
+                          .slice(0, 6)
+                          .map((property) => (
+                            <div
+                              key={property._id}
+                              onClick={() => handlePropertySelect(property._id)}
+                              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-600 rounded cursor-pointer flex justify-between items-center group transition-colors"
+                            >
+                              <span className="text-sm text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                                {property.property_name}
+                              </span>
+                              <span className="text-xs text-gray-500 dark:text-gray-400">
+                                ₹{property.rate}
+                              </span>
+                            </div>
+                          ))}
+                        {properties.filter(
+                          (p) =>
+                            !formData.matchedProperties.includes(p._id) &&
+                            p.property_name.toLowerCase().includes(propertySearch.toLowerCase())
+                        ).length === 0 && (
+                            <div className="p-3 text-center text-sm text-gray-500 dark:text-gray-400">
+                              No matching properties found
+                            </div>
+                          )}
+                      </div>
                     </div>
                   </div>
 
@@ -653,6 +713,7 @@ export default function LeadsTable() {
                         required
                       >
                         <option value="new">New</option>
+                        <option value="inquiry">Inquiry</option>
                         <option value="contacted">Contacted</option>
                         <option value="converted">Converted</option>
                         <option value="archived">Archived</option>
@@ -697,34 +758,75 @@ export default function LeadsTable() {
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Matched Properties
                     </label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                      {properties.map((property) => (
-                        <div
-                          key={property._id}
-                          className={`p-2 border rounded cursor-pointer transition-colors ${formData.matchedProperties.includes(property._id)
-                            ? "bg-blue-50 dark:bg-blue-900/30 border-blue-500 dark:border-blue-400"
-                            : "border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
-                            }`}
-                          onClick={() => handlePropertySelect(property._id)}
-                        >
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              checked={formData.matchedProperties.includes(
-                                property._id
-                              )}
-                              onChange={() => { }}
-                              className="hidden"
-                            />
-                            <span className="text-gray-900 dark:text-gray-100">
-                              {property.property_name}
+
+                    {/* Selected Properties Chips */}
+                    {formData.matchedProperties.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {properties
+                          .filter((p) => formData.matchedProperties.includes(p._id))
+                          .map((p) => (
+                            <span
+                              key={p._id}
+                              className="flex items-center gap-1 bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 px-2 py-1 rounded text-sm"
+                            >
+                              <span className="truncate max-w-[150px]">{p.property_name}</span>
+                              <button
+                                type="button"
+                                onClick={() => handlePropertySelect(p._id)}
+                                className="hover:text-blue-600 dark:hover:text-blue-300"
+                              >
+                                <X size={14} />
+                              </button>
                             </span>
-                            <span className="text-xs text-gray-500 dark:text-gray-400 ml-auto">
-                              ₹{property.rate}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
+                          ))}
+                      </div>
+                    )}
+
+                    {/* Search and Selection List */}
+                    <div className="border border-gray-300 dark:border-gray-600 rounded-md overflow-hidden bg-white dark:bg-gray-700">
+                      <div className="relative border-b border-gray-200 dark:border-gray-600">
+                        <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                        <input
+                          type="text"
+                          placeholder="Search properties to add..."
+                          className="w-full pl-9 pr-3 py-2 bg-transparent text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none"
+                          value={propertySearch}
+                          onChange={(e) => setPropertySearch(e.target.value)}
+                        />
+                      </div>
+
+                      <div className="max-h-48 overflow-y-auto p-1">
+                        {properties
+                          .filter(
+                            (p) =>
+                              !formData.matchedProperties.includes(p._id) &&
+                              p.property_name.toLowerCase().includes(propertySearch.toLowerCase())
+                          )
+                          .slice(0, 6)
+                          .map((property) => (
+                            <div
+                              key={property._id}
+                              onClick={() => handlePropertySelect(property._id)}
+                              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-600 rounded cursor-pointer flex justify-between items-center group transition-colors"
+                            >
+                              <span className="text-sm text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                                {property.property_name}
+                              </span>
+                              <span className="text-xs text-gray-500 dark:text-gray-400">
+                                ₹{property.rate}
+                              </span>
+                            </div>
+                          ))}
+                        {properties.filter(
+                          (p) =>
+                            !formData.matchedProperties.includes(p._id) &&
+                            p.property_name.toLowerCase().includes(propertySearch.toLowerCase())
+                        ).length === 0 && (
+                            <div className="p-3 text-center text-sm text-gray-500 dark:text-gray-400">
+                              No matching properties found
+                            </div>
+                          )}
+                      </div>
                     </div>
                   </div>
 
@@ -863,14 +965,22 @@ export default function LeadsTable() {
                       <div className="text-sm">
                         {lead.matchedProperties &&
                           lead.matchedProperties.length > 0 ? (
-                          <div className="flex flex-wrap gap-1">
+                          <div className="flex flex-col gap-1">
                             {lead.matchedProperties.map((prop: any) => (
-                              <span
+                              <div
                                 key={prop._id || prop}
-                                className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs px-2 py-0.5 rounded-full"
+                                className="bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800 rounded p-1.5"
                               >
-                                {prop.property_name || "Property"}
-                              </span>
+                                <div className="font-medium text-blue-800 dark:text-blue-200 text-xs">
+                                  {prop.property_name || "Property"}
+                                </div>
+                                {(prop.address || prop.flat_no) && (
+                                  <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5 leading-tight">
+                                    {prop.flat_no ? `Flat ${prop.flat_no}, ` : ""}
+                                    {prop.address}
+                                  </div>
+                                )}
+                              </div>
                             ))}
                           </div>
                         ) : lead.searchQuery ? (
@@ -888,9 +998,11 @@ export default function LeadsTable() {
                     <td className="py-2 px-4 whitespace-nowrap">
                       <span
                         className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${lead.status === "new"
-                            ? "bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200"
+                          ? "bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200"
+                          : lead.status === "inquiry"
+                            ? "bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200"
                             : lead.status === "contacted"
-                              ? "bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200"
+                              ? "bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200"
                               : lead.status === "converted"
                                 ? "bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200"
                                 : "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200"
@@ -905,10 +1017,10 @@ export default function LeadsTable() {
                     <td className="py-2 px-4 whitespace-nowrap">
                       <span
                         className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${lead.priority === "high"
-                            ? "bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-200"
-                            : lead.priority === "medium"
-                              ? "bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200"
-                              : "bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200"
+                          ? "bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-200"
+                          : lead.priority === "medium"
+                            ? "bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200"
+                            : "bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200"
                           }`}
                       >
                         {lead.priority}
