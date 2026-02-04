@@ -104,6 +104,11 @@ export default function SignUpForm() {
       return;
     }
 
+    if (form.phone_no.length !== 10) {
+      toast.error("The phone number must contain exactly 10 digits.");
+      return;
+    }
+
     setLoading(true);
     try {
       await axios.post("/auth/createUser", {
@@ -113,9 +118,13 @@ export default function SignUpForm() {
       toast.success("Sign up successful! Redirecting to sign in...");
       setTimeout(() => navigate("/signin"), 1500);
     } catch (err: any) {
-      toast.error(
-        err?.response?.data?.message || "Sign up failed. Please try again."
-      );
+      if (err?.response?.data?.message === "User already exists") {
+        toast.error("An account already exists. Please log in using your email and password.");
+      } else {
+        toast.error(
+          err?.response?.data?.message || "Sign up failed. Please try again."
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -273,8 +282,8 @@ export default function SignUpForm() {
                   {verificationStep === 1
                     ? "Send Verification Email"
                     : verificationStep === 2
-                    ? "Verify OTP"
-                    : "Sign Up"}
+                      ? "Verify OTP"
+                      : "Sign Up"}
                 </LoadingButton>
               </div>
             </div>

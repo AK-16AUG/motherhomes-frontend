@@ -210,8 +210,72 @@ export default function AppointmentTable() {
     }
   };
 
+  // Filters
+  const [filters, setFilters] = useState({
+    status: "",
+    createdDate: "",
+    appointmentDate: "",
+  });
+
+  const handleFilterChange = (key: string, value: string) => {
+    setFilters((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const filteredAppointments = appointments.filter((apt) => {
+    const matchesStatus = filters.status ? apt.status === filters.status : true;
+    const matchesCreatedDate = filters.createdDate
+      ? new Date(apt.createdAt).toLocaleDateString() ===
+      new Date(filters.createdDate).toLocaleDateString()
+      : true;
+    const matchesAppointmentDate = filters.appointmentDate
+      ? new Date(apt.schedule_Time).toLocaleDateString() ===
+      new Date(filters.appointmentDate).toLocaleDateString()
+      : true;
+    return matchesStatus && matchesCreatedDate && matchesAppointmentDate;
+  });
+
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-white/[0.05] dark:bg-white/[0.03]">
+      {/* Filters Section */}
+      <div className="p-4 flex gap-4 flex-wrap border-b border-gray-100">
+        <select
+          className="border rounded px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+          value={filters.status}
+          onChange={(e) => handleFilterChange("status", e.target.value)}
+        >
+          <option value="">All Statuses</option>
+          <option value="Pending">Pending</option>
+          <option value="Confirmed">Confirmed</option>
+          <option value="Cancelled">Cancelled</option>
+        </select>
+
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-500">Created:</span>
+          <input
+            type="date"
+            className="border rounded px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+            value={filters.createdDate}
+            onChange={(e) => handleFilterChange("createdDate", e.target.value)}
+          />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-500">Appt Date:</span>
+          <input
+            type="date"
+            className="border rounded px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+            value={filters.appointmentDate}
+            onChange={(e) => handleFilterChange("appointmentDate", e.target.value)}
+          />
+        </div>
+        <button
+          onClick={() => setFilters({ status: "", createdDate: "", appointmentDate: "" })}
+          className="text-sm text-blue-500 hover:text-blue-700 underline"
+        >
+          Clear Filters
+        </button>
+      </div>
+
       <div className="max-w-full overflow-x-auto">
         <Table aria-label="Appointments list">
           <TableHeader>
@@ -238,7 +302,7 @@ export default function AppointmentTable() {
           </TableHeader>
 
           <TableBody>
-            {appointments.map((appointment) => (
+            {filteredAppointments.map((appointment) => (
               <TableRow key={appointment._id}>
                 <TableCell className="text-left px-5 py-3 font-medium">
                   {appointment.property_id?.property_name || "Unknown"}
@@ -351,15 +415,15 @@ export default function AppointmentTable() {
                       {!(
                         role === "user" && appointment.status === "Confirmed"
                       ) && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          color="red"
-                          onClick={() => confirmDelete(appointment._id)}
-                        >
-                          <TrashBinIcon className="h-4 w-4" />
-                        </Button>
-                      )}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            color="red"
+                            onClick={() => confirmDelete(appointment._id)}
+                          >
+                            <TrashBinIcon className="h-4 w-4" />
+                          </Button>
+                        )}
                     </div>
                   )}
                 </TableCell>

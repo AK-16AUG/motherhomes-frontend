@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
 import instance from "../../utils/Axios/Axios";
@@ -7,6 +8,7 @@ export default function NotificationDropdown() {
   const [isOpen, setIsOpen] = useState(false);
   const [notifying, setNotifying] = useState(true);
   const [notification, setNotification] = useState<any[]>([]);
+  const navigate = useNavigate();
 
   function toggleDropdown() {
     setIsOpen(!isOpen);
@@ -16,21 +18,21 @@ export default function NotificationDropdown() {
     const fetchUserData = async () => {
       try {
         const userId = localStorage.getItem("userid");
-        const role=localStorage.getItem("role");
+        const role = localStorage.getItem("role");
         console.log(role);
-        if(role=="admin" || role=="superadmin"){
+        if (role == "admin" || role == "superadmin") {
           if (userId) {
-          const response = await instance.get(`/notification/user/${userId}/admin`);
-          setNotification(response.data || []);
+            const response = await instance.get(`/notification/user/${userId}/admin`);
+            setNotification(response.data || []);
+          }
         }
+        else {
+          if (userId) {
+            const response = await instance.get(`/notification/user/${userId}`);
+            setNotification(response.data || []);
+          }
         }
-        else{
- if (userId) {
-          const response = await instance.get(`/notification/user/${userId}`);
-          setNotification(response.data || []);
-        }
-        }
-       
+
       } catch (error) {
         console.error("Error fetching user data:", error);
       }
@@ -55,9 +57,8 @@ export default function NotificationDropdown() {
         onClick={handleClick}
       >
         <span
-          className={`absolute right-0 top-0.5 z-10 h-2 w-2 rounded-full bg-orange-400 ${
-            !notifying ? "hidden" : "flex"
-          }`}
+          className={`absolute right-0 top-0.5 z-10 h-2 w-2 rounded-full bg-orange-400 ${!notifying ? "hidden" : "flex"
+            }`}
         >
           <span className="absolute inline-flex w-full h-full bg-orange-400 rounded-full opacity-75 animate-ping" />
         </span>
@@ -105,8 +106,20 @@ export default function NotificationDropdown() {
             notification.map((item, index) => (
               <li key={index}>
                 <DropdownItem
-                  onItemClick={closeDropdown}
-                  className="flex gap-3 rounded-lg border-b border-gray-100 p-3 hover:bg-gray-100 dark:border-gray-800 dark:hover:bg-white/5"
+                  onItemClick={() => {
+                    closeDropdown();
+                    // Basic redirection logic based on description or context
+                    // If description contains "appointment", go to appointments
+                    // Ideally the notification object should have a 'type' or 'link' field
+                    if (item.description && item.description.toLowerCase().includes("appointment")) {
+                      navigate("/appointments");
+                    } else if (item.description && item.description.toLowerCase().includes("lead")) {
+                      navigate("/leads");
+                    } else {
+                      // Default fallback
+                    }
+                  }}
+                  className="flex gap-3 rounded-lg border-b border-gray-100 p-3 hover:bg-gray-100 dark:border-gray-800 dark:hover:bg-white/5 cursor-pointer"
                 >
                   <span className="block">
                     <span className="mb-1.5 block space-x-1 text-theme-sm text-gray-500 dark:text-gray-400">
