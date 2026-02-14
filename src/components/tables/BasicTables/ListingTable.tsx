@@ -9,7 +9,7 @@ import Badge from "../../ui/badge/Badge";
 import { useEffect, useState } from "react";
 import instance from "../../../utils/Axios/Axios";
 import { Link } from "react-router-dom";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, Upload } from "lucide-react";
 import { toast } from "react-toastify";
 
 type LoadingState = "idle" | "loading" | "success" | "error";
@@ -51,6 +51,31 @@ export default function ListingTable() {
   const [error, setError] = useState<string | null>(null);
   const [editingAvailabilityId, setEditingAvailabilityId] = useState<string | null>(null);
   const [availabilityEditValue, setAvailabilityEditValue] = useState<boolean>(true);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const fetchProperties = async () => {
+    try {
+      setState("loading");
+      const response = await instance.get(`/property`);
+
+      if (Array.isArray(response.data)) {
+        setProperties(response.data);
+      } else if (response.data && Array.isArray(response.data.results)) {
+        setProperties(response.data.results);
+      } else {
+        setProperties([]);
+      }
+
+      setState("success");
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to load properties. Please try again later."
+      );
+      setState("error");
+    }
+  };
 
   useEffect(() => {
     const fetchProperties = async () => {
@@ -144,6 +169,40 @@ export default function ListingTable() {
       toast.success("Availability updated");
     } catch (error) {
       toast.error("Failed to update availability");
+    }
+  };
+
+  const handleBulkUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      setIsUploading(true);
+      const loadingToast = toast.info("Uploading listing...", { autoClose: false });
+
+      const response = await instance.post("/property/bulk-upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      toast.dismiss(loadingToast);
+
+      const { summary } = response.data;
+      toast.success(
+        `Upload completed! ${summary.success} properties added, ${summary.skipped} duplicates skipped.`
+      );
+
+      // Refresh the list
+      fetchProperties();
+    } catch (error: any) {
+      console.error("Bulk upload failed:", error);
+      toast.error(error.response?.data?.message || "Bulk upload failed");
+    } finally {
+      setIsUploading(false);
+      // Reset input
+      event.target.value = "";
     }
   };
 
@@ -242,203 +301,224 @@ export default function ListingTable() {
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-      <div className="w-full overflow-x-auto">
-        <Table
-          aria-label="Properties list"
-          className="text-gray-900 min-w-[900px]"
-        >
-          <TableHeader>
-            <TableRow>
-              <TableCell
-                isHeader
-                className="text-left px-5 py-3 text-gray-900 font-medium"
-              >
-                Property
-              </TableCell>
-              <TableCell
-                isHeader
-                className="text-left px-5 py-3 text-gray-900 font-medium"
-              >
-                Category
-              </TableCell>
-              <TableCell
-                isHeader
-                className="text-left px-5 py-3 text-gray-900 font-medium"
-              >
-                Rate
-              </TableCell>
-              <TableCell
-                isHeader
-                className="text-left px-5 py-3 text-gray-900 font-medium"
-              >
-                Location
-              </TableCell>
-              <TableCell
-                isHeader
-                className="text-left px-5 py-3 text-gray-900 font-medium"
-              >
-                Flat No
-              </TableCell>
-              <TableCell
-                isHeader
-                className="text-left px-5 py-3 text-gray-900 font-medium"
-              >
-                Details
-              </TableCell>
-              <TableCell
-                isHeader
-                className="text-left px-5 py-3 text-gray-900 font-medium"
-              >
-                Furnishing
-              </TableCell>
-              <TableCell
-                isHeader
-                className="text-left px-5 py-3 text-gray-900 font-medium"
-              >
-                Availability
-              </TableCell>
-              <TableCell
-                isHeader
-                className="text-left px-5 py-3 text-gray-900 font-medium"
-              >
-                Added On
-              </TableCell>
-              <TableCell
-                isHeader
-                className="text-left px-5 py-3 text-gray-900 font-medium"
-              >
-                Actions
-              </TableCell>
-            </TableRow>
-          </TableHeader>
+    <div className="space-y-4">
+      <div className="flex justify-end items-center gap-4">
+        <label className={`
+          flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer
+          ${isUploading
+            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+            : 'bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200'}
+        `}>
+          <Upload size={18} />
+          {isUploading ? "Uploading..." : "Bulk Upload (Excel)"}
+          <input
+            type="file"
+            accept=".xlsx,.xls"
+            className="hidden"
+            onChange={handleBulkUpload}
+            disabled={isUploading}
+          />
+        </label>
+      </div>
 
-          <TableBody>
-            {Array.isArray(properties) ? (
-              properties.map((property) => (
-                <TableRow
-                  key={property._id}
-                  className="hover:bg-gray-50"
-                >
-                  <TableCell className="text-left px-5 py-3 font-medium text-gray-900">
-                    <Link
-                      to={`/listing/${property._id}`}
-                      className="text-blue-600 hover:text-blue-800"
-                    >
-                      {property.property_name}
-                      <p className="text-sm text-gray-500 line-clamp-1">
-                        {property.description}
-                      </p>
-                    </Link>
-                  </TableCell>
-                  <TableCell className="text-left px-5 py-3 text-gray-900">
-                    {getCategoryBadge(property.category)}
-                  </TableCell>
-                  <TableCell className="text-left px-5 py-3 font-medium text-gray-900">
-                    {formatCurrency(property.rate)}
-                  </TableCell>
-                  <TableCell className="text-left px-5 py-3 text-gray-900">
-                    <div>
-                      <span className="text-gray-900">
-                        {property.city}
-                      </span>
-                      <span className="block text-gray-500">
-                        {property.state}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-left px-5 py-3 text-gray-900">
-                    <span className="text-sm text-gray-900">
-                      {property.flat_no || "N/A"}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-left px-5 py-3 text-gray-900">
-                    <div className="flex gap-2">
-                      {property.category === "pg" ? (
-                        <span className="text-sm text-gray-900">
-                          {property.totalCapacity || "N/A"} Capacity
-                        </span>
-                      ) : (
-                        <>
-                          <span className="text-sm text-gray-900">
-                            {property.bed} Beds
-                          </span>
-                          <span className="text-sm text-gray-900">
-                            |
-                          </span>
-                          <span className="text-sm text-gray-900">
-                            {property.bathroom} Baths
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-left px-5 py-3 text-gray-900">
-                    {getFurnishingBadge(property.furnishing_type)}
-                  </TableCell>
-                  <TableCell className="text-left px-3 py-2 text-gray-900">
-                    {editingAvailabilityId === property._id ? (
-                      <select
-                        value={availabilityEditValue ? "Available" : "Occupied"}
-                        onChange={e => setAvailabilityEditValue(e.target.value === "Available")}
-                        onBlur={async () => {
-                          await handleStatusUpdate(property._id, availabilityEditValue);
-                          setEditingAvailabilityId(null);
-                        }}
-                        className="border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        autoFocus
-                      >
-                        <option value="Available">Available</option>
-                        <option value="Occupied">Occupied</option>
-                      </select>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        {getAvailabilityBadge(property.availability)}
-                        <button
-                          onClick={() => {
-                            setEditingAvailabilityId(property._id);
-                            setAvailabilityEditValue(property.availability);
-                          }}
-                          className="p-1 text-gray-500 hover:text-blue-600 hover:bg-gray-50 rounded transition-colors"
-                          title="Edit availability"
-                        >
-                          <Pencil size={16} />
-                        </button>
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-left px-5 py-3 text-gray-900">
-                    {formatDate(property.createdAt)}
-                  </TableCell>
-                  <TableCell className="text-left px-5 py-3 text-gray-900">
-                    <div className="flex gap-2">
-                      <Link
-                        to={`/edit-listing/${property._id}`}
-                        className="p-1 text-gray-500 hover:text-blue-600 hover:bg-gray-50 rounded transition-colors"
-                        title="Edit property"
-                      >
-                        <Pencil size={16} />
-                      </Link>
-                      <button
-                        onClick={() => handleDelete(property._id)}
-                        className="p-1 text-gray-500 hover:text-red-600 hover:bg-gray-50 rounded transition-colors"
-                        title="Delete property"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="w-full overflow-x-auto">
+          <Table
+            aria-label="Properties list"
+            className="text-gray-900 min-w-[900px]"
+          >
+            <TableHeader>
               <TableRow>
-                <TableCell className="text-center py-4">
-                  No properties data available
+                <TableCell
+                  isHeader
+                  className="text-left px-5 py-3 text-gray-900 font-medium"
+                >
+                  Property
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="text-left px-5 py-3 text-gray-900 font-medium"
+                >
+                  Category
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="text-left px-5 py-3 text-gray-900 font-medium"
+                >
+                  Rate
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="text-left px-5 py-3 text-gray-900 font-medium"
+                >
+                  Location
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="text-left px-5 py-3 text-gray-900 font-medium"
+                >
+                  Flat No
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="text-left px-5 py-3 text-gray-900 font-medium"
+                >
+                  Details
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="text-left px-5 py-3 text-gray-900 font-medium"
+                >
+                  Furnishing
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="text-left px-5 py-3 text-gray-900 font-medium"
+                >
+                  Availability
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="text-left px-5 py-3 text-gray-900 font-medium"
+                >
+                  Added On
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="text-left px-5 py-3 text-gray-900 font-medium"
+                >
+                  Actions
                 </TableCell>
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
+            </TableHeader>
+
+            <TableBody>
+              {Array.isArray(properties) ? (
+                properties.map((property) => (
+                  <TableRow
+                    key={property._id}
+                    className="hover:bg-gray-50"
+                  >
+                    <TableCell className="text-left px-5 py-3 font-medium text-gray-900">
+                      <Link
+                        to={`/listing/${property._id}`}
+                        className="text-blue-600 hover:text-blue-800"
+                      >
+                        {property.property_name}
+                        <p className="text-sm text-gray-500 line-clamp-1">
+                          {property.description}
+                        </p>
+                      </Link>
+                    </TableCell>
+                    <TableCell className="text-left px-5 py-3 text-gray-900">
+                      {getCategoryBadge(property.category)}
+                    </TableCell>
+                    <TableCell className="text-left px-5 py-3 font-medium text-gray-900">
+                      {formatCurrency(property.rate)}
+                    </TableCell>
+                    <TableCell className="text-left px-5 py-3 text-gray-900">
+                      <div>
+                        <span className="text-gray-900">
+                          {property.city}
+                        </span>
+                        <span className="block text-gray-500">
+                          {property.state}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-left px-5 py-3 text-gray-900">
+                      <span className="text-sm text-gray-900">
+                        {property.flat_no || "N/A"}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-left px-5 py-3 text-gray-900">
+                      <div className="flex gap-2">
+                        {property.category === "pg" ? (
+                          <span className="text-sm text-gray-900">
+                            {property.totalCapacity || "N/A"} Capacity
+                          </span>
+                        ) : (
+                          <>
+                            <span className="text-sm text-gray-900">
+                              {property.bed} Beds
+                            </span>
+                            <span className="text-sm text-gray-900">
+                              |
+                            </span>
+                            <span className="text-sm text-gray-900">
+                              {property.bathroom} Baths
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-left px-5 py-3 text-gray-900">
+                      {getFurnishingBadge(property.furnishing_type)}
+                    </TableCell>
+                    <TableCell className="text-left px-3 py-2 text-gray-900">
+                      {editingAvailabilityId === property._id ? (
+                        <select
+                          value={availabilityEditValue ? "Available" : "Occupied"}
+                          onChange={e => setAvailabilityEditValue(e.target.value === "Available")}
+                          onBlur={async () => {
+                            await handleStatusUpdate(property._id, availabilityEditValue);
+                            setEditingAvailabilityId(null);
+                          }}
+                          className="border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          autoFocus
+                        >
+                          <option value="Available">Available</option>
+                          <option value="Occupied">Occupied</option>
+                        </select>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          {getAvailabilityBadge(property.availability)}
+                          <button
+                            onClick={() => {
+                              setEditingAvailabilityId(property._id);
+                              setAvailabilityEditValue(property.availability);
+                            }}
+                            className="p-1 text-gray-500 hover:text-blue-600 hover:bg-gray-50 rounded transition-colors"
+                            title="Edit availability"
+                          >
+                            <Pencil size={16} />
+                          </button>
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-left px-5 py-3 text-gray-900">
+                      {formatDate(property.createdAt)}
+                    </TableCell>
+                    <TableCell className="text-left px-5 py-3 text-gray-900">
+                      <div className="flex gap-2">
+                        <Link
+                          to={`/edit-listing/${property._id}`}
+                          className="p-1 text-gray-500 hover:text-blue-600 hover:bg-gray-50 rounded transition-colors"
+                          title="Edit property"
+                        >
+                          <Pencil size={16} />
+                        </Link>
+                        <button
+                          onClick={() => handleDelete(property._id)}
+                          className="p-1 text-gray-500 hover:text-red-600 hover:bg-gray-50 rounded transition-colors"
+                          title="Delete property"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell className="text-center py-4">
+                    No properties data available
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
     </div>
   );
