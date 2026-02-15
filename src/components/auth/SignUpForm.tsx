@@ -26,7 +26,15 @@ export default function SignUpForm() {
   const navigate = useNavigate();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+
+    if (name === "phone_no") {
+      // Allow only numbers and limit to 10 digits
+      const numericValue = value.replace(/\D/g, "").slice(0, 10);
+      setForm({ ...form, [name]: numericValue });
+    } else {
+      setForm({ ...form, [name]: value });
+    }
   };
 
   const handleOtpChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -217,6 +225,13 @@ export default function SignUpForm() {
                     onChange={handleOtpChange}
                     required
                   />
+                  <button
+                    type="button"
+                    onClick={() => setVerificationStep(1)}
+                    className="mt-2 text-sm text-blue-500 hover:text-blue-700 underline"
+                  >
+                    Change Email/Phone
+                  </button>
                 </div>
               )}
 

@@ -12,28 +12,28 @@ interface Review {
 const REVIEWS: Review[] = [
   {
     author: "Rahul Sharma",
-    role: "Final Year, IIT Delhi",
+    role: "Final Year, ABESEC",
     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Rahul",
     text: "Finding a flat near campus was always a nightmare. This platform made it so easy. I found a verified place in Malviya Nagar within a day. No brokerage and genuine owners!",
     rating: 4.9,
   },
   {
     author: "Priya Patel",
-    role: "Medical Student, AIIMS",
+    role: "Medical Student, IMS Ghaziabad",
     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Priya",
     text: "As a student moving from Gujarat, I was worried about safety and hidden costs. The virtual tours and verified listings gave me so much confidence. Best service for students!",
     rating: 4.8,
   },
   {
     author: "Ananya Iyer",
-    role: "Masters in Economics, DU",
+    role: "Masters in Economics, AKGEC",
     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ananya",
     text: "The community features are great. Not only did I find a room, but I also found amazing flatmates who are also students. The whole process was transparent and smooth.",
     rating: 4.7,
   },
   {
     author: "Arjun Verma",
-    role: "B.Tech Student, VIT",
+    role: "B.Tech Student, ABESEC",
     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Arjun",
     text: "I've tried many apps, but this one is specifically tailored for what we students need. Cheap, near college, and reliable. Highly recommended for anyone coming to Noida or Delhi!",
     rating: 5.0,
@@ -123,12 +123,12 @@ const CustomerReview: React.FC = () => {
                   <ChevronRight className="w-6 h-6" />
                 </button>
               </div>
-              
+
               <div className="flex items-center gap-1">
                 {[...Array(5)].map((_, i) => (
-                  <Star 
-                    key={i} 
-                    className={`w-4 h-4 ${i < Math.floor(currentReview.rating) ? "text-yellow-400" : "text-gray-600"}`} 
+                  <Star
+                    key={i}
+                    className={`w-4 h-4 ${i < Math.floor(currentReview.rating) ? "text-yellow-400" : "text-gray-600"}`}
                     fill={i < Math.floor(currentReview.rating) ? "currentColor" : "none"}
                   />
                 ))}
