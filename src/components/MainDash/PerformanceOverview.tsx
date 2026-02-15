@@ -1,5 +1,5 @@
 import React from "react";
-import { Users, Home, Target, Calendar, TrendingUp, DollarSign } from "lucide-react";
+import { Users, Target, Calendar, TrendingUp, DollarSign } from "lucide-react";
 
 interface KPIProps {
     label: string;
