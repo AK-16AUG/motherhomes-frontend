@@ -9,8 +9,9 @@ import Badge from "../../ui/badge/Badge";
 import { useEffect, useState } from "react";
 import instance from "../../../utils/Axios/Axios";
 import { Link } from "react-router-dom";
-import { Pencil, Trash2, Upload } from "lucide-react";
+import { Pencil, Trash2, Upload, Download, FileText } from "lucide-react";
 import { toast } from "react-toastify";
+import * as XLSX from "xlsx";
 
 type LoadingState = "idle" | "loading" | "success" | "error";
 
@@ -172,6 +173,48 @@ export default function ListingTable() {
     }
   };
 
+  const downloadExcel = () => {
+    const exportData = properties.map((p) => ({
+      Name: p.property_name,
+      Description: p.description,
+      Category: p.category,
+      Rate: p.rate,
+      City: p.city,
+      State: p.state,
+      Furnishing: p.furnishing_type,
+      Beds: p.bed,
+      Bathrooms: p.bathroom,
+      Availability: p.availability ? "Available" : "Occupied",
+      "Flat No": p.flat_no || "",
+      "Added On": new Date(p.createdAt).toLocaleDateString(),
+    }));
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Properties");
+    XLSX.writeFile(wb, "properties_export.xlsx");
+  };
+
+  const downloadSampleTemplate = () => {
+    const sampleData = [{
+      property_name: "Sunrise Apartment",
+      description: "2BHK apartment with parking",
+      category: "rent",
+      rate: "15000",
+      city: "Mumbai",
+      state: "Maharashtra",
+      furnishing_type: "Semi-furnished",
+      bed: 2,
+      bathroom: 2,
+      flat_no: "A-101",
+      totalCapacity: "",
+    }];
+    const ws = XLSX.utils.json_to_sheet(sampleData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Properties Template");
+    XLSX.writeFile(wb, "properties_sample_template.xlsx");
+    toast.info("Sample template downloaded!");
+  };
+
   const handleBulkUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -302,7 +345,15 @@ export default function ListingTable() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end items-center gap-4">
+      <div className="flex justify-end items-center gap-2 flex-wrap">
+        <button
+          onClick={downloadSampleTemplate}
+          className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200"
+          title="Download sample Excel template"
+        >
+          <FileText size={16} />
+          Sample Template
+        </button>
         <label className={`
           flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer
           ${isUploading
@@ -319,6 +370,14 @@ export default function ListingTable() {
             disabled={isUploading}
           />
         </label>
+        <button
+          onClick={downloadExcel}
+          disabled={properties.length === 0}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-green-50 text-green-700 hover:bg-green-100 border border-green-200 disabled:opacity-50"
+        >
+          <Download size={16} />
+          Export Excel
+        </button>
       </div>
 
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">

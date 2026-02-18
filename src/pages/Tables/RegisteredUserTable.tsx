@@ -1,12 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   ChevronLeft,
   ChevronRight,
   Mail,
   Phone,
   User,
+  Download,
+  Upload,
+  FileText,
 } from "lucide-react";
 import instance from "../../utils/Axios/Axios";
+import * as XLSX from "xlsx";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 interface UserData {
   _id: string;
@@ -29,6 +35,7 @@ export default function RegisteredUserTable() {
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const bulkUploadRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -72,12 +79,49 @@ export default function RegisteredUserTable() {
   const isFiltering = searchTerm.trim() !== "";
   const displayData = isFiltering ? filteredData : data;
 
-  const paginatedData = isFiltering 
+  const paginatedData = isFiltering
     ? displayData.slice(
-        (currentPage - 1) * entriesPerPage,
-        currentPage * entriesPerPage
-      )
+      (currentPage - 1) * entriesPerPage,
+      currentPage * entriesPerPage
+    )
     : displayData;
+
+  const downloadExcel = () => {
+    const exportData = data.map((u) => ({
+      Name: u.User_Name,
+      Email: u.email,
+      Phone: u.phone_no,
+      "Registered At": new Date(u.createdAt).toLocaleDateString(),
+    }));
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Users");
+    XLSX.writeFile(wb, "users_export.xlsx");
+  };
+
+  const downloadSampleTemplate = () => {
+    const sampleData = [{ Name: "Jane Doe", Email: "jane@example.com", Phone: "9876543210" }];
+    const ws = XLSX.utils.json_to_sheet(sampleData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Users Template");
+    XLSX.writeFile(wb, "users_sample_template.xlsx");
+    toast.info("Sample template downloaded!");
+  };
+
+  const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const buffer = await file.arrayBuffer();
+      const wb = XLSX.read(buffer);
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows: any[] = XLSX.utils.sheet_to_json(ws);
+      if (rows.length === 0) { toast.error("No data found in file"); return; }
+      toast.info(`Processing ${rows.length} users...`);
+      toast.warning("Bulk user creation requires email verification. Please use the registration flow for individual users.");
+    } catch { toast.error("Failed to process bulk upload file."); }
+    if (bulkUploadRef.current) bulkUploadRef.current.value = "";
+  };
 
   if (loading) {
     return (
@@ -99,16 +143,29 @@ export default function RegisteredUserTable() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 sm:p-10">
+      <ToastContainer position="bottom-center" theme="colored" style={{ zIndex: 9999999 }} />
       <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
         <span className="text-gray-400 dark:text-gray-500">Home</span> /{" "}
         <span>Users Management</span>
       </div>
-      
+
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg dark:shadow-gray-900/20 p-4 sm:p-6 overflow-hidden">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             Registered Users
           </h2>
+          <div className="flex flex-wrap gap-2">
+            <input type="file" accept=".xlsx,.xls" ref={bulkUploadRef} onChange={handleBulkUpload} className="hidden" />
+            <button onClick={downloadSampleTemplate} className="flex items-center gap-2 bg-gray-500 dark:bg-gray-600 text-white px-3 py-2 rounded text-sm hover:bg-gray-600 dark:hover:bg-gray-500 transition-colors" title="Download sample template">
+              <FileText size={15} /> Sample Template
+            </button>
+            <button onClick={() => bulkUploadRef.current?.click()} className="flex items-center gap-2 bg-orange-500 dark:bg-orange-600 text-white px-3 py-2 rounded text-sm hover:bg-orange-600 dark:hover:bg-orange-500 transition-colors" title="Bulk upload users">
+              <Upload size={15} /> Bulk Upload
+            </button>
+            <button onClick={downloadExcel} disabled={data.length === 0} className="flex items-center gap-2 bg-green-600 dark:bg-green-700 text-white px-3 py-2 rounded text-sm hover:bg-green-700 dark:hover:bg-green-600 transition-colors disabled:opacity-50">
+              <Download size={15} /> Export Excel
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
@@ -226,14 +283,13 @@ export default function RegisteredUserTable() {
           <p className="whitespace-nowrap">
             {isFiltering
               ? `Found ${filteredData.length} matching results`
-              : `Showing ${
-                  totalEntries === 0
-                    ? 0
-                    : (currentPage - 1) * entriesPerPage + 1
-                } to ${Math.min(
-                  currentPage * entriesPerPage,
-                  totalEntries
-                )} of ${totalEntries} entries`}
+              : `Showing ${totalEntries === 0
+                ? 0
+                : (currentPage - 1) * entriesPerPage + 1
+              } to ${Math.min(
+                currentPage * entriesPerPage,
+                totalEntries
+              )} of ${totalEntries} entries`}
           </p>
 
           {!isFiltering ? (
@@ -272,11 +328,10 @@ export default function RegisteredUserTable() {
                   pages.push(
                     <button
                       key={i}
-                      className={`px-3 py-1 rounded border border-gray-300 dark:border-gray-600 transition-colors ${
-                        currentPage === i
-                          ? "bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 border-blue-300 dark:border-blue-600"
-                          : "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-600"
-                      }`}
+                      className={`px-3 py-1 rounded border border-gray-300 dark:border-gray-600 transition-colors ${currentPage === i
+                        ? "bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 border-blue-300 dark:border-blue-600"
+                        : "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-600"
+                        }`}
                       onClick={() => setCurrentPage(i)}
                       disabled={loading}
                     >

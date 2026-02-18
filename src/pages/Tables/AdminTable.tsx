@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
-import { Plus, Edit, Trash, X } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Plus, Edit, Trash, X, Download, Upload, FileText } from "lucide-react";
 import instance from "../../utils/Axios/Axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import * as XLSX from "xlsx";
 
 interface Admin {
   _id: string;
@@ -28,6 +29,7 @@ export default function AdminTable() {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ ...defaultForm });
   const [editId, setEditId] = useState<string | null>(null);
+  const bulkUploadRef = useRef<HTMLInputElement>(null);
 
   // Fetch all admins
   useEffect(() => {
@@ -108,6 +110,59 @@ export default function AdminTable() {
     }
   };
 
+  const downloadExcel = () => {
+    const exportData = admins.map((a) => ({
+      Name: a.User_Name,
+      Email: a.email,
+      Phone: a.phone_no,
+      Role: a.role,
+      Verified: a.isVerified ? "Yes" : "No",
+    }));
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Admins");
+    XLSX.writeFile(wb, "admins_export.xlsx");
+  };
+
+  const downloadSampleTemplate = () => {
+    const sampleData = [{ Name: "Admin Name", Email: "admin@example.com", Phone: "9876543210", Password: "SecurePass123" }];
+    const ws = XLSX.utils.json_to_sheet(sampleData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Admins Template");
+    XLSX.writeFile(wb, "admins_sample_template.xlsx");
+    toast.info("Sample template downloaded!");
+  };
+
+  const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const buffer = await file.arrayBuffer();
+      const wb = XLSX.read(buffer);
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows: any[] = XLSX.utils.sheet_to_json(ws);
+      if (rows.length === 0) { toast.error("No data found in file"); return; }
+      let successCount = 0, errorCount = 0;
+      for (const row of rows) {
+        try {
+          await instance.post("/user/admin", {
+            User_Name: row["Name"] || "",
+            email: row["Email"] || "",
+            phone_no: row["Phone"] || "",
+            password: row["Password"] || "Admin@123",
+            role: "admin",
+            isVerified: true,
+          });
+          successCount++;
+        } catch { errorCount++; }
+      }
+      toast.success(`Bulk upload: ${successCount} admins added${errorCount > 0 ? `, ${errorCount} failed` : ""}.`);
+      const res = await instance.get("/user/admins");
+      setAdmins(res.data);
+    } catch { toast.error("Failed to process bulk upload file."); }
+    if (bulkUploadRef.current) bulkUploadRef.current.value = "";
+  };
+
   return (
     <div className="min-h-screen p-4 sm:p-6 bg-gray-50 dark:bg-gray-900">
       <ToastContainer
@@ -119,16 +174,36 @@ export default function AdminTable() {
         <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">
           Admin Management
         </h2>
-        <button
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 text-white px-4 py-2 rounded w-full sm:w-auto justify-center transition-colors"
-          onClick={() => {
-            setShowModal(true);
-            setForm({ ...defaultForm });
-            setEditId(null);
-          }}
-        >
-          <Plus size={18} /> Add Admin
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <input type="file" accept=".xlsx,.xls" ref={bulkUploadRef} onChange={handleBulkUpload} className="hidden" />
+          <button
+            className="flex items-center gap-2 bg-gray-500 hover:bg-gray-600 dark:bg-gray-600 dark:hover:bg-gray-500 text-white px-3 py-2 rounded text-sm transition-colors"
+            onClick={downloadSampleTemplate}
+            title="Download sample template"
+          >
+            <FileText size={15} /> Sample Template
+          </button>
+          <button
+            className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-500 text-white px-3 py-2 rounded text-sm transition-colors"
+            onClick={() => bulkUploadRef.current?.click()}
+            title="Bulk upload admins from Excel"
+          >
+            <Upload size={15} /> Bulk Upload
+          </button>
+          <button
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white px-3 py-2 rounded text-sm transition-colors"
+            onClick={downloadExcel}
+            disabled={admins.length === 0}
+          >
+            <Download size={15} /> Export Excel
+          </button>
+          <button
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 text-white px-3 py-2 rounded text-sm transition-colors"
+            onClick={() => { setShowModal(true); setForm({ ...defaultForm }); setEditId(null); }}
+          >
+            <Plus size={15} /> Add Admin
+          </button>
+        </div>
       </div>
 
       {/* Modal */}

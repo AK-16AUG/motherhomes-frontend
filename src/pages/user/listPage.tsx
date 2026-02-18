@@ -104,7 +104,7 @@ const ListPage: React.FC = () => {
     (node: HTMLDivElement | null) => {
       if (loading) return;
       if (observer.current) observer.current.disconnect();
-      
+
       observer.current = new IntersectionObserver((entries) => {
         if (entries[0].isIntersecting && hasMore) {
           setPage((prevPage) => prevPage + 1);
@@ -125,14 +125,19 @@ const ListPage: React.FC = () => {
           limit: 10,
         },
       });
-      
+
+      // Defensive: handle both {results: [...]} and direct array responses
+      const results: Property[] = Array.isArray(res.data)
+        ? (res.data as unknown as Property[])
+        : res.data?.results || [];
+
       if (page === 1) {
-        setData(res.data.results);
+        setData(results);
       } else {
-        setData((prevData) => [...prevData, ...res.data.results]);
+        setData((prevData) => [...prevData, ...results]);
       }
-      
-      setHasMore(res.data.results.length > 0);
+
+      setHasMore(results.length > 0);
     } catch (error) {
       console.error("Error fetching property data:", error);
     } finally {
@@ -275,7 +280,7 @@ const ListPage: React.FC = () => {
                               bedroom: item.category === "pg" ? parseInt(item.totalCapacity) || 0 : item.bed,
                               bathroom: item.bathroom,
                               price: item.rate,
-                              category:item.category
+                              category: item.category
                             }}
                           />
                         </div>
@@ -300,16 +305,16 @@ const ListPage: React.FC = () => {
                 <div className="w-full h-[300px] sm:h-[400px] lg:h-[calc(100vh-6rem)] sticky top-24">
                   <Map items={
                     displayedData
-                    .filter((item:any) => item.latitude && item.longitude)
-                    .map((item:any) => ({
-                      id: item._id,
-                      latitude: parseFloat(item.latitude),
-                      longitude: parseFloat(item.longitude),
-                      img: item.images?.[0] || "",
-                      title: item.property_name,
-                      bedroom: item.bed,
-                      price: item.rate,
-                    }))
+                      .filter((item: any) => item.latitude && item.longitude)
+                      .map((item: any) => ({
+                        id: item._id,
+                        latitude: parseFloat(item.latitude),
+                        longitude: parseFloat(item.longitude),
+                        img: item.images?.[0] || "",
+                        title: item.property_name,
+                        bedroom: item.bed,
+                        price: item.rate,
+                      }))
                   } />
                 </div>
               </div>

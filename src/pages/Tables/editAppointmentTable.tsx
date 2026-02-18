@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   Search,
   Download,
@@ -7,12 +7,15 @@ import {
   ChevronRight,
   Check,
   X,
+  Upload,
+  FileText,
 } from "lucide-react";
 import instance from "../../utils/Axios/Axios";
 import Button from "../../components/ui/button/Button";
 import { Link } from "react-router-dom";
 import { LoadingSpinner } from "../../components/ui/loading";
 import { toast, ToastContainer } from "react-toastify";
+import * as XLSX from "xlsx";
 
 interface Appointment {
   _id: string;
@@ -26,7 +29,7 @@ interface Appointment {
     property_name: string;
     images: string[];
   };
-  status: "Pending" | "Confirmed" | "Cancelled" | "Completed" |"Convert to lead";
+  status: "Pending" | "Confirmed" | "Cancelled" | "Completed" | "Convert to lead";
   schedule_Time: string;
   createdAt: string;
 }
@@ -36,7 +39,6 @@ export default function DataTableWithStatus() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [updating, setUpdating] = useState<string | null>(null);
-  const [downloading, setDownloading] = useState(false);
   const [page, setPage] = useState(1);
   const [entriesPerPage, setEntriesPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
@@ -44,6 +46,7 @@ export default function DataTableWithStatus() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editStatus, setEditStatus] = useState<Appointment["status"]>("Pending");
   const [editDate, setEditDate] = useState("");
+  const bulkUploadRef = useRef<HTMLInputElement>(null);
 
   const fetchAppointments = async (pageNum = 1, isLoadMore = false) => {
     try {
@@ -108,10 +111,10 @@ export default function DataTableWithStatus() {
       };
 
       await instance.put(`/appointments/${id}`, updatedData);
-      
+
       // Update the local state instead of reloading
-      setData(prev => prev.map(appointment => 
-        appointment._id === id 
+      setData(prev => prev.map(appointment =>
+        appointment._id === id
           ? { ...appointment, status: editStatus, schedule_Time: editDate }
           : appointment
       ));
@@ -125,34 +128,53 @@ export default function DataTableWithStatus() {
     }
   };
 
-  const handleDownload = async () => {
-    try {
-      setDownloading(true);
-      
-      const csv = [
-        ["User", "Property", "Scheduled Date", "Status"],
-        ...data.map((row) => [
-          row.user_id.User_Name,
-          row?.property_id?.property_name,
-          new Date(row.schedule_Time).toLocaleDateString(),
-          row.status,
-        ]),
-      ]
-        .map((row) => row.join(","))
-        .join("\n");
+  const handleDownload = () => {
+    const exportData = data.map((row) => ({
+      User: row.user_id?.User_Name || "",
+      Email: row.user_id?.email || "",
+      Property: row?.property_id?.property_name || "",
+      "Scheduled Date": new Date(row.schedule_Time).toLocaleDateString(),
+      Status: row.status,
+      "Created At": row.createdAt ? new Date(row.createdAt).toLocaleDateString() : "",
+    }));
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Appointments");
+    XLSX.writeFile(wb, "appointments_export.xlsx");
+  };
 
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.setAttribute("download", "appointments.csv");
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } catch (error) {
-      console.error("Error downloading appointments:", error);
-    } finally {
-      setDownloading(false);
+  const downloadSampleTemplate = () => {
+    const sampleData = [{
+      User_Name: "John Doe",
+      Email: "john@example.com",
+      Property_Name: "Sunrise Apartment",
+      Scheduled_Date: "2025-01-15",
+      Status: "Pending",
+    }];
+    const ws = XLSX.utils.json_to_sheet(sampleData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Appointments Template");
+    XLSX.writeFile(wb, "appointments_sample_template.xlsx");
+    toast.info("Sample template downloaded!");
+  };
+
+  const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const buffer = await file.arrayBuffer();
+      const wb = XLSX.read(buffer);
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows: any[] = XLSX.utils.sheet_to_json(ws);
+      if (rows.length === 0) { toast.error("No data found in file"); return; }
+      toast.info(`Processing ${rows.length} appointments...`);
+      // Note: bulk appointment creation requires user_id and property_id which are IDs
+      // This template is for reference; actual bulk import needs ID mapping
+      toast.warning("Bulk appointment upload requires valid user and property IDs. Please use the admin panel for individual appointments.");
+    } catch {
+      toast.error("Failed to process bulk upload file.");
     }
+    if (bulkUploadRef.current) bulkUploadRef.current.value = "";
   };
 
   const filteredData = data.filter((appointment) =>
@@ -266,22 +288,36 @@ export default function DataTableWithStatus() {
                 disabled={loading}
               />
             </div>
+            <input
+              type="file"
+              accept=".xlsx,.xls"
+              ref={bulkUploadRef}
+              onChange={handleBulkUpload}
+              className="hidden"
+            />
+            <button
+              onClick={downloadSampleTemplate}
+              className="flex items-center gap-1 px-3 py-2 rounded text-sm w-full sm:w-auto justify-center bg-gray-500 dark:bg-gray-600 text-white hover:bg-gray-600 dark:hover:bg-gray-500"
+              title="Download sample template"
+            >
+              <FileText size={15} />
+              <span className="hidden sm:inline">Sample Template</span>
+            </button>
+            <button
+              onClick={() => bulkUploadRef.current?.click()}
+              className="flex items-center gap-1 px-3 py-2 rounded text-sm w-full sm:w-auto justify-center bg-orange-500 dark:bg-orange-600 text-white hover:bg-orange-600 dark:hover:bg-orange-500"
+              title="Bulk upload from Excel"
+            >
+              <Upload size={15} />
+              <span className="hidden sm:inline">Bulk Upload</span>
+            </button>
             <button
               onClick={handleDownload}
-              disabled={downloading || loading || data.length === 0}
-              className="flex items-center gap-1 px-3 py-2 border dark:border-gray-600 rounded text-sm w-full sm:w-auto justify-center bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={loading || data.length === 0}
+              className="flex items-center gap-1 px-3 py-2 border dark:border-gray-600 rounded text-sm w-full sm:w-auto justify-center bg-green-600 dark:bg-green-700 text-white hover:bg-green-700 dark:hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {downloading ? (
-                <>
-                  <LoadingSpinner size="sm" color="primary" />
-                  <span className="hidden sm:inline">Downloading...</span>
-                </>
-              ) : (
-                <>
-                  <span className="hidden sm:inline">Download</span>
-                  <Download size={16} />
-                </>
-              )}
+              <Download size={15} />
+              <span className="hidden sm:inline">Export Excel</span>
             </button>
           </div>
         </div>
@@ -369,7 +405,7 @@ export default function DataTableWithStatus() {
                           <option value="Cancelled">Cancelled</option>
                           <option value="Completed">Completed</option>
                           <option value="Convert to lead"> Convert to lead</option>
-                         
+
                         </select>
                       ) : (
                         <span
@@ -466,11 +502,10 @@ export default function DataTableWithStatus() {
                   return (
                     <button
                       key={pageNum}
-                      className={`px-3 py-1 rounded border dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-600 ${
-                        page === pageNum
-                          ? "bg-gray-100 dark:bg-gray-600 font-medium"
-                          : ""
-                      }`}
+                      className={`px-3 py-1 rounded border dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-600 ${page === pageNum
+                        ? "bg-gray-100 dark:bg-gray-600 font-medium"
+                        : ""
+                        }`}
                       onClick={() => setPage(pageNum)}
                     >
                       {pageNum}
@@ -504,8 +539,8 @@ export default function DataTableWithStatus() {
 
             {hasMore && !loadingMore && (
               <div className="flex justify-center p-4">
-                <Button 
-                  onClick={loadMore} 
+                <Button
+                  onClick={loadMore}
                   variant="outline"
                   disabled={loadingMore}
                 >

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -7,11 +7,15 @@ import {
   X,
   Eye,
   Trash,
+  Download,
+  Upload,
+  FileText,
 } from "lucide-react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import instance from "../../utils/Axios/Axios";
 import { Link } from "react-router";
+import * as XLSX from "xlsx";
 
 interface Property {
   _id: string;
@@ -102,6 +106,7 @@ export default function DataTable() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const bulkUploadRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -121,7 +126,7 @@ export default function DataTable() {
         console.log("Properties count:", propertiesArray.length);
         console.log(
           "Properties categories:",
-          propertiesArray.map((p:any) => p.category)
+          propertiesArray.map((p: any) => p.category)
         );
         setProperties(propertiesArray);
 
@@ -146,7 +151,7 @@ export default function DataTable() {
       tenant.users.some((user) =>
         user.email.toLowerCase().includes(searchLower)
       ) ||
-      (tenant.tenantDetails?.some((detail) => 
+      (tenant.tenantDetails?.some((detail) =>
         detail.name.toLowerCase().includes(searchLower) ||
         detail.email.toLowerCase().includes(searchLower)
       ) || false)
@@ -165,20 +170,20 @@ export default function DataTable() {
   ) => {
     const { name, value } = e.target;
     const memberCount = name === "members" ? parseInt(value) || 0 : formData.members;
-    
+
     setFormData((prev) => ({
       ...prev,
       [name]: name === "members" ? memberCount : value,
-      users: name === "members" && prev.property_type === "Normal" 
-        ? Array(memberCount).fill("") 
+      users: name === "members" && prev.property_type === "Normal"
+        ? Array(memberCount).fill("")
         : prev.users,
       tenantDetails: name === "members" && prev.property_type === "Pg"
         ? Array(memberCount).fill({ name: "", email: "" })
         : name === "property_type" && value === "Pg"
-        ? Array(prev.members).fill({ name: "", email: "" })
-        : name === "property_type" && value === "Normal"
-        ? []
-        : prev.tenantDetails,
+          ? Array(prev.members).fill({ name: "", email: "" })
+          : name === "property_type" && value === "Normal"
+            ? []
+            : prev.tenantDetails,
     }));
   };
 
@@ -258,6 +263,47 @@ export default function DataTable() {
   };
   // --------------------------------
 
+  const downloadExcel = () => {
+    const exportData = data.map((t) => ({
+      Tenant: t.property_type === "Normal" ? t.name : t.tenantDetails?.map(d => d.name).join(", ") || "",
+      "Property Type": t.property_type,
+      Property: t.property_id?.property_name || "",
+      "Flat No": t.flatNo,
+      Society: t.society,
+      Members: t.members,
+      "Start Date": new Date(t.startDate).toLocaleDateString(),
+      Rent: t.rent,
+    }));
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Tenants");
+    XLSX.writeFile(wb, "tenants_export.xlsx");
+  };
+
+  const downloadSampleTemplate = () => {
+    const sampleData = [{ Tenant_Name: "John Doe", Property_Type: "Normal", Flat_No: "A-101", Society: "Green Valley", Members: 2, Start_Date: "2025-01-01", Rent: "15000" }];
+    const ws = XLSX.utils.json_to_sheet(sampleData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Tenants Template");
+    XLSX.writeFile(wb, "tenants_sample_template.xlsx");
+    toast.info("Sample template downloaded!");
+  };
+
+  const handleBulkUploadExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const buffer = await file.arrayBuffer();
+      const wb = XLSX.read(buffer);
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows: any[] = XLSX.utils.sheet_to_json(ws);
+      if (rows.length === 0) { toast.error("No data found in file"); return; }
+      toast.info(`Processing ${rows.length} tenants...`);
+      toast.warning("Bulk tenant creation requires property IDs. Please use the Add Tenant form for individual entries.");
+    } catch { toast.error("Failed to process bulk upload file."); }
+    if (bulkUploadRef.current) bulkUploadRef.current.value = "";
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-10 flex items-center justify-center">
@@ -292,13 +338,25 @@ export default function DataTable() {
           <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">
             Occupied Flat Details
           </h2>
-          <button
-            onClick={() => setShowModal(true)}
-            className="flex items-center gap-2 bg-blue-600 dark:bg-blue-700 text-white px-4 py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors w-full sm:w-auto justify-center shadow-md"
-          >
-            <Plus size={16} />
-            Add Tenant
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <input type="file" accept=".xlsx,.xls" ref={bulkUploadRef} onChange={handleBulkUploadExcel} className="hidden" />
+            <button onClick={downloadSampleTemplate} className="flex items-center gap-2 bg-gray-500 dark:bg-gray-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-gray-600 dark:hover:bg-gray-500 transition-colors" title="Download sample template">
+              <FileText size={15} /> Sample Template
+            </button>
+            <button onClick={() => bulkUploadRef.current?.click()} className="flex items-center gap-2 bg-orange-500 dark:bg-orange-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-orange-600 dark:hover:bg-orange-500 transition-colors" title="Bulk upload tenants">
+              <Upload size={15} /> Bulk Upload
+            </button>
+            <button onClick={downloadExcel} disabled={data.length === 0} className="flex items-center gap-2 bg-green-600 dark:bg-green-700 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-700 dark:hover:bg-green-600 transition-colors disabled:opacity-50">
+              <Download size={15} /> Export Excel
+            </button>
+            <button
+              onClick={() => setShowModal(true)}
+              className="flex items-center gap-2 bg-blue-600 dark:bg-blue-700 text-white px-3 py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors shadow-md text-sm"
+            >
+              <Plus size={15} />
+              Add Tenant
+            </button>
+          </div>
         </div>
 
         {/* Add Tenant Modal */}
@@ -328,7 +386,7 @@ export default function DataTable() {
                   <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-800 mb-4">
                     <p className="text-sm text-blue-800 dark:text-blue-300 flex items-start">
                       <span className="mr-2 mt-0.5">ℹ️</span>
-                      {formData.property_type === "Pg" 
+                      {formData.property_type === "Pg"
                         ? "For PG properties, provide individual name and email for each tenant."
                         : "For Normal properties, provide a universal tenant name and member emails."
                       } All fields marked with{" "}
@@ -406,7 +464,7 @@ export default function DataTable() {
                         >
                           <option value="">Select Property</option>
                           {Array.isArray(properties) &&
-                          properties.length > 0 ? (
+                            properties.length > 0 ? (
                             properties
                               .filter((property) => property && property._id) // Basic validation
                               .map((property) => (
@@ -415,8 +473,8 @@ export default function DataTable() {
                                   {property.category === "rent"
                                     ? ` (₹${property.rate}/month)`
                                     : property.category === "sale"
-                                    ? ` (₹${property.rate})`
-                                    : ` (${property.category})`}
+                                      ? ` (₹${property.rate})`
+                                      : ` (${property.category})`}
                                 </option>
                               ))
                           ) : (
@@ -661,8 +719,8 @@ export default function DataTable() {
                   >
                     <td className="py-2 px-4 flex items-center gap-2 whitespace-nowrap">
                       <span className="font-medium text-gray-800 dark:text-gray-200 truncate max-w-[120px]">
-                        {tenant.property_type === "Normal" 
-                          ? tenant?.name 
+                        {tenant.property_type === "Normal"
+                          ? tenant?.name
                           : tenant.tenantDetails?.map(t => t.name).join(", ") || "Multiple Tenants"
                         }
                       </span>
@@ -749,9 +807,8 @@ export default function DataTable() {
             {[...Array(totalPages)].map((_, i) => (
               <button
                 key={i}
-                className={`px-3 py-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 ${
-                  currentPage === i + 1 ? "bg-gray-100 dark:bg-gray-700" : ""
-                }`}
+                className={`px-3 py-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 ${currentPage === i + 1 ? "bg-gray-100 dark:bg-gray-700" : ""
+                  }`}
                 onClick={() => setCurrentPage(i + 1)}
               >
                 {i + 1}

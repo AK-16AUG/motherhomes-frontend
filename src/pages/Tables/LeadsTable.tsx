@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -12,11 +12,13 @@ import {
   User,
   Edit,
   Download,
+  Upload,
+  FileText,
 } from "lucide-react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import instance from "../../utils/Axios/Axios";
-import { saveAs } from "file-saver";
+import * as XLSX from "xlsx";
 
 interface Property {
   _id: string;
@@ -52,6 +54,7 @@ export default function LeadsTable() {
   const [showModal, setShowModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [currentLead, setCurrentLead] = useState<any>(null);
+  const bulkUploadRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState<LeadFormData>({
     contactInfo: {
       name: "",
@@ -255,37 +258,79 @@ export default function LeadsTable() {
     }
   };
 
-  const downloadCSV = () => {
-    const headers = [
-      "Name",
-      "Email",
-      "Phone",
-      "Status",
-      "Source",
-      "Priority",
-      "Properties",
-      "Notes",
+  const downloadExcel = () => {
+    const exportData = data.map((lead: any) => ({
+      Name: lead.contactInfo?.name || "",
+      Email: lead.contactInfo?.email || "",
+      Phone: lead.contactInfo?.phone || "",
+      Status: lead.status || "",
+      Source: lead.source || "",
+      Priority: lead.priority || "",
+      Properties: lead.matchedProperties?.map((p: any) => p.property_name).join(", ") || "",
+      Notes: lead.notes || "",
+      Location: lead.location || "",
+      "Created At": lead.createdAt ? new Date(lead.createdAt).toLocaleDateString() : "",
+    }));
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Leads");
+    XLSX.writeFile(wb, "leads_export.xlsx");
+  };
+
+  const downloadSampleTemplate = () => {
+    const sampleData = [
+      {
+        Name: "John Doe",
+        Email: "john@example.com",
+        Phone: "9876543210",
+        Status: "new",
+        Source: "website",
+        Priority: "medium",
+        Notes: "Interested in 2BHK",
+        Location: "Mumbai",
+      },
     ];
+    const ws = XLSX.utils.json_to_sheet(sampleData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Leads Template");
+    XLSX.writeFile(wb, "leads_sample_template.xlsx");
+    toast.info("Sample template downloaded!");
+  };
 
-    const csvData = data.map((lead: any) => {
-      return [
-        `"${lead.contactInfo?.name || ""}"`,
-        `"${lead.contactInfo?.email || ""}"`,
-        `"${lead.contactInfo?.phone || ""}"`,
-        `"${lead.status || ""}"`,
-        `"${lead.source || ""}"`,
-        `"${lead.priority || ""}"`,
-        `"${lead.matchedProperties?.map((p: any) => p.property_name).join(", ") ||
-        ""
-        }"`,
-        `"${lead.notes || ""}"`,
-      ].join(",");
-    });
-
-    const csvContent = [headers.join(","), ...csvData].join("\n");
-
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    saveAs(blob, "leads_export.csv");
+  const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const data = await file.arrayBuffer();
+      const wb = XLSX.read(data);
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows: any[] = XLSX.utils.sheet_to_json(ws);
+      if (rows.length === 0) { toast.error("No data found in file"); return; }
+      let successCount = 0;
+      let errorCount = 0;
+      for (const row of rows) {
+        try {
+          await instance.post("/leads", {
+            contactInfo: { name: row["Name"] || "", email: row["Email"] || "", phone: row["Phone"] || "" },
+            status: row["Status"] || "new",
+            source: row["Source"] || "website",
+            priority: row["Priority"] || "medium",
+            notes: row["Notes"] || "",
+            location: row["Location"] || "",
+            matchedProperties: [],
+          });
+          successCount++;
+        } catch { errorCount++; }
+      }
+      toast.success(`Bulk upload: ${successCount} leads added${errorCount > 0 ? `, ${errorCount} failed` : ""}.`);
+      const response = await instance.get(`/leads?page=1&limit=${entriesPerPage}`);
+      setData(response.data.results || []);
+      setTotalEntries(response.data.total || 0);
+      setTotalPages(Math.ceil(response.data.total / entriesPerPage) || 0);
+    } catch (err) {
+      toast.error("Failed to process bulk upload file.");
+    }
+    if (bulkUploadRef.current) bulkUploadRef.current.value = "";
   };
 
   // Replace the current search effect with this improved implementation
@@ -388,19 +433,42 @@ export default function LeadsTable() {
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             Real Estate Leads
           </h2>
-          <div className="flex gap-2 w-full sm:w-auto">
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+            <input
+              type="file"
+              accept=".xlsx,.xls"
+              ref={bulkUploadRef}
+              onChange={handleBulkUpload}
+              className="hidden"
+            />
             <button
-              onClick={downloadCSV}
-              className="flex items-center gap-2 bg-green-600 dark:bg-green-700 text-white px-4 py-2 rounded hover:bg-green-700 dark:hover:bg-green-600 transition-colors w-full sm:w-auto justify-center"
+              onClick={downloadSampleTemplate}
+              className="flex items-center gap-2 bg-gray-500 dark:bg-gray-600 text-white px-3 py-2 rounded hover:bg-gray-600 dark:hover:bg-gray-500 transition-colors text-sm"
+              title="Download sample Excel template"
             >
-              <Download size={16} />
-              Export CSV
+              <FileText size={15} />
+              Sample Template
+            </button>
+            <button
+              onClick={() => bulkUploadRef.current?.click()}
+              className="flex items-center gap-2 bg-orange-500 dark:bg-orange-600 text-white px-3 py-2 rounded hover:bg-orange-600 dark:hover:bg-orange-500 transition-colors text-sm"
+              title="Bulk upload leads from Excel"
+            >
+              <Upload size={15} />
+              Bulk Upload
+            </button>
+            <button
+              onClick={downloadExcel}
+              className="flex items-center gap-2 bg-green-600 dark:bg-green-700 text-white px-3 py-2 rounded hover:bg-green-700 dark:hover:bg-green-600 transition-colors text-sm"
+            >
+              <Download size={15} />
+              Export Excel
             </button>
             <button
               onClick={() => setShowModal(true)}
-              className="flex items-center gap-2 bg-blue-600 dark:bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors w-full sm:w-auto justify-center"
+              className="flex items-center gap-2 bg-blue-600 dark:bg-blue-700 text-white px-3 py-2 rounded hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors text-sm"
             >
-              <Plus size={16} />
+              <Plus size={15} />
               Add Lead
             </button>
           </div>

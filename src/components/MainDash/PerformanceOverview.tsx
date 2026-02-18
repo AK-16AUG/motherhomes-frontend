@@ -1,5 +1,6 @@
 import React from "react";
-import { Users, Target, TrendingUp, DollarSign } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Users, Home, Target, Calendar, TrendingUp, DollarSign } from "lucide-react";
 
 interface KPIProps {
     label: string;
@@ -8,10 +9,14 @@ interface KPIProps {
     trend?: string;
     trendColor?: string;
     bgColor: string;
+    onClick?: () => void;
 }
 
-const KPICard: React.FC<KPIProps> = ({ label, value, icon, trend, trendColor, bgColor }) => (
-    <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-800 transition-all hover:shadow-md">
+const KPICard: React.FC<KPIProps> = ({ label, value, icon, trend, trendColor, bgColor, onClick }) => (
+    <div
+        className={`bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-800 transition-all hover:shadow-md ${onClick ? "cursor-pointer hover:scale-[1.02] active:scale-[0.99]" : ""}`}
+        onClick={onClick}
+    >
         <div className="flex items-center justify-between mb-4">
             <div className={`p-3 rounded-xl ${bgColor}`}>
                 {icon}
@@ -47,6 +52,8 @@ interface PerformanceOverviewProps {
 }
 
 const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({ stats }) => {
+    const navigate = useNavigate();
+
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <KPICard
@@ -56,14 +63,16 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({ stats }) => {
                 trend="+12.5%"
                 trendColor="bg-emerald-100 text-emerald-700"
                 bgColor="bg-emerald-50 dark:bg-emerald-900/20"
+                onClick={() => navigate("/tenants")}
             />
             <KPICard
-                label="Active Students"
+                label="Active Users"
                 value={stats.activeUsers || 0}
                 icon={<Users className="w-6 h-6 text-blue-600" />}
                 trend="+5.2%"
                 trendColor="bg-blue-100 text-blue-700"
                 bgColor="bg-blue-50 dark:bg-blue-900/20"
+                onClick={() => navigate("/users")}
             />
             <KPICard
                 label="Occupancy Rate"
@@ -72,6 +81,7 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({ stats }) => {
                 trend="High Demand"
                 trendColor="bg-amber-100 text-amber-700"
                 bgColor="bg-amber-50 dark:bg-amber-900/20"
+                onClick={() => navigate("/properties")}
             />
             <KPICard
                 label="Total Leads"
@@ -80,6 +90,7 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({ stats }) => {
                 trend="+18%"
                 trendColor="bg-purple-100 text-purple-700"
                 bgColor="bg-purple-50 dark:bg-purple-900/20"
+                onClick={() => navigate("/leads")}
             />
         </div>
     );
