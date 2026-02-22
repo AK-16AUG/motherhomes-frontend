@@ -37,19 +37,31 @@ export default function RecentAppointment() {
         setLoading(true);
         setError(null);
         const response = await instance.get("/appointments");
-        
+
         const data = response.data;
-        console.log("API Response:", data);
-        
-        if (data?.appointments && Array.isArray(data.appointments.data)) {
-          setAppointments(data.appointments.data);
+        console.log("API Response for Recent Appointments:", data);
+
+        // Handle different possible response structures
+        let appointmentData = [];
+        if (data?.appointments?.data && Array.isArray(data.appointments.data)) {
+          appointmentData = data.appointments.data;
+        } else if (data?.appointments && Array.isArray(data.appointments)) {
+          appointmentData = data.appointments;
         } else if (Array.isArray(data)) {
-          setAppointments(data);
+          appointmentData = data;
+        } else if (data?.data && Array.isArray(data.data)) {
+          appointmentData = data.data;
+        }
+
+        if (appointmentData.length > 0 || (data && typeof data === 'object')) {
+          setAppointments(appointmentData);
         } else {
+          console.error("Unexpected data format:", data);
           setError("Invalid data format received from server");
         }
-      } catch (err) {
-        setError("Failed to fetch appointments");
+      } catch (err: any) {
+        const errorMessage = err.response?.data?.message || err.message || "Failed to fetch appointments";
+        setError(errorMessage);
         console.error("Error fetching appointments:", err);
       } finally {
         setLoading(false);
@@ -85,14 +97,14 @@ export default function RecentAppointment() {
         </div>
 
         <div className="flex items-center gap-3">
-      <Link to={"/editappointments"}>
-          <button className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200">
-            See all
-          </button>
+          <Link to={"/editappointments"}>
+            <button className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200">
+              See all
+            </button>
           </Link>
         </div>
       </div>
-      
+
       <div className="max-w-full overflow-x-auto">
         <Table>
           <TableHeader>
@@ -156,8 +168,8 @@ export default function RecentAppointment() {
                         appointment?.status === "Confirmed"
                           ? "success"
                           : appointment?.status === "Pending"
-                          ? "primary"
-                          : "error"
+                            ? "primary"
+                            : "error"
                       }
                     >
                       {appointment?.status || "Unknown"}
@@ -170,7 +182,7 @@ export default function RecentAppointment() {
                 <TableCell className="text-center py-6 text-gray-500">
                   No appointments found
                 </TableCell>
-                
+
               </TableRow>
             )}
           </TableBody>

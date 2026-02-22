@@ -12,58 +12,90 @@ interface LeadFunnelProps {
         total: number;
         funnel: FunnelStage[];
     };
+    smartQueue?: {
+        name: string;
+        type: string;
+        activity: string;
+        temp: string;
+        icon: string;
+    }[];
 }
 
-const LeadFunnel: React.FC<LeadFunnelProps> = ({ data }) => {
+const LeadFunnel: React.FC<LeadFunnelProps> = ({ data, smartQueue = [] }) => {
+    const funnelStages = Array.isArray(data?.funnel) ? data.funnel : [];
+    const totalLeads = Number(data?.total || 0);
+
+    const getIcon = (iconName: string) => {
+        switch (iconName) {
+            case "Flame": return <Flame className="text-orange-500 w-5 h-5" />;
+            case "Droplets": return <Droplets className="text-blue-400 w-5 h-5" />;
+            case "Snowflake": return <Snowflake className="text-indigo-300 w-5 h-5" />;
+            default: return <Snowflake className="text-indigo-300 w-5 h-5" />;
+        }
+    };
+
     return (
         <div className="grid grid-cols-12 gap-8 mt-10">
             {/* Funnel Visualization */}
             <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 whileInView={{ opacity: 1, x: 0 }}
-                className="col-span-12 lg:col-span-7 bg-white dark:bg-gray-900 rounded-[2.5rem] p-10 shadow-2xl shadow-gray-200/50 dark:shadow-none border border-gray-100 dark:border-gray-800"
+                viewport={{ once: true }}
+                className="col-span-12 lg:col-span-7 bg-white/70 dark:bg-gray-900/70 backdrop-blur-2xl rounded-[3rem] p-10 shadow-2xl shadow-gray-200/50 dark:shadow-none border border-white dark:border-gray-800"
             >
-                <div className="flex items-center justify-between mb-10">
+                <div className="flex items-center justify-between mb-12">
                     <div>
-                        <h3 className="text-2xl font-black text-gray-900 dark:text-white flex items-center gap-3">
-                            <Filter className="text-orange-500" /> Conversion Funnel
+                        <h3 className="text-3xl font-black text-gray-900 dark:text-white flex items-center gap-3 tracking-tighter uppercase font-outline">
+                            <Filter className="text-orange-500 w-8 h-8" /> Asset Funnel
                         </h3>
-                        <p className="text-sm text-gray-500 font-bold mt-1 uppercase tracking-widest">Growth pipeline efficiency</p>
+                        <p className="text-[10px] text-gray-400 font-black mt-2 uppercase tracking-[0.3em]">Conversion pipeline velocity</p>
                     </div>
                 </div>
 
-                <div className="space-y-4">
-                    {data.funnel.map((stage, idx) => {
-                        const percentage = (stage.value / data.total) * 100;
+                <div className="space-y-6">
+                    {funnelStages.map((stage, idx) => {
+                        const stageValue = Number(stage?.value || 0);
+                        const percentage = totalLeads > 0 ? (stageValue / totalLeads) * 100 : 0;
                         return (
-                            <div key={stage.stage} className="relative">
-                                <div className="flex items-center justify-between mb-2 relative z-10 px-6">
-                                    <span className="text-sm font-black text-gray-700 dark:text-gray-300 uppercase tracking-widest">{stage.stage}</span>
-                                    <span className="text-lg font-black text-gray-900 dark:text-white">{stage.value}</span>
+                            <div key={stage?.stage || idx} className="relative group">
+                                <div className="flex items-center justify-between mb-3 relative z-10 px-8">
+                                    <span className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-widest">{stage?.stage || "Unknown"}</span>
+                                    <span className="text-2xl font-black text-gray-900 dark:text-white tracking-tighter">{stageValue}</span>
                                 </div>
-                                <div className="h-14 bg-gray-50 dark:bg-gray-800/50 rounded-2xl overflow-hidden relative">
+                                <div className="h-16 bg-gray-50 dark:bg-gray-800/50 rounded-[1.25rem] overflow-hidden relative border border-gray-100 dark:border-gray-700/50 shadow-inner">
                                     <motion.div
                                         initial={{ width: 0 }}
                                         whileInView={{ width: `${percentage}%` }}
-                                        transition={{ duration: 1, delay: idx * 0.1 }}
-                                        className={`h-full bg-gradient-to-r from-orange-400 to-rose-500 opacity-20`}
-                                    />
-                                    <div className="absolute inset-y-0 left-6 flex items-center">
-                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                            {percentage.toFixed(0)}% Conversion
-                                        </p>
+                                        viewport={{ once: true }}
+                                        transition={{ duration: 1.5, type: "spring", stiffness: 50, delay: idx * 0.1 }}
+                                        className={`h-full bg-gradient-to-r from-orange-500 via-rose-500 to-indigo-600 opacity-20 relative`}
+                                    >
+                                        <div className="absolute inset-0 bg-white/10 group-hover:bg-transparent transition-colors" />
+                                    </motion.div>
+                                    <div className="absolute inset-y-0 left-8 flex items-center">
+                                        <div className="flex items-center gap-2">
+                                            <div className="h-1 w-1 rounded-full bg-orange-500 animate-pulse" />
+                                            <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">
+                                                {percentage.toFixed(0)}% Retention
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         );
                     })}
+                    {funnelStages.length === 0 && (
+                        <div className="py-16 text-center border-2 border-dashed border-gray-100 dark:border-gray-800 rounded-[2.5rem]">
+                            <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.3em]">Calibrating Pipeline Metrics</p>
+                        </div>
+                    )}
                 </div>
 
-                <div className="mt-8 p-6 rounded-3xl bg-rose-50 dark:bg-rose-500/5 border border-rose-100 dark:border-rose-500/20">
-                    <p className="text-xs font-black text-rose-600 dark:text-rose-400 uppercase tracking-[0.2em] mb-1">Funnel Insight</p>
-                    <p className="text-sm font-bold text-gray-700 dark:text-gray-300">
-                        Large drop-off after "Visits". Likely pricing hesitation or room mismatch.
-                        <span className="text-rose-600 dark:text-rose-400 ml-2 cursor-pointer hover:underline uppercase text-xs font-black">Run Audit →</span>
+                <div className="mt-10 p-8 rounded-[2rem] bg-orange-50 dark:bg-orange-500/5 border border-orange-100 dark:border-orange-500/20 shadow-inner">
+                    <p className="text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-[0.3em] mb-2">Automated Audit</p>
+                    <p className="text-sm font-bold text-gray-700 dark:text-gray-300 leading-relaxed">
+                        {totalLeads < 8 ? "Cumulative lead volume low. Statistical significance pending for bottleneck analysis." : "Noticeable leakage detected in conversion steps. Review follow-up speed recommended."}
+                        <span className="text-orange-600 dark:text-orange-400 ml-3 cursor-pointer hover:tracking-widest transition-all uppercase text-[10px] font-black">Generate Report →</span>
                     </p>
                 </div>
             </motion.div>
@@ -72,41 +104,46 @@ const LeadFunnel: React.FC<LeadFunnelProps> = ({ data }) => {
             <motion.div
                 initial={{ opacity: 0, x: 20 }}
                 whileInView={{ opacity: 1, x: 0 }}
-                className="col-span-12 lg:col-span-5 bg-white dark:bg-gray-900 rounded-[2.5rem] p-10 shadow-2xl shadow-gray-200/50 dark:shadow-none border border-gray-100 dark:border-gray-800"
+                viewport={{ once: true }}
+                className="col-span-12 lg:col-span-5 bg-white/70 dark:bg-gray-900/70 backdrop-blur-2xl rounded-[3rem] p-10 shadow-2xl shadow-indigo-500/5 dark:shadow-none border border-white dark:border-gray-800"
             >
-                <div className="mb-8">
-                    <h3 className="text-xl font-black text-gray-900 dark:text-white flex items-center gap-3">
-                        <Users className="text-violet-600" /> High-Intent Leads
+                <div className="mb-12">
+                    <h3 className="text-2xl font-black text-gray-900 dark:text-white flex items-center gap-3 tracking-tighter uppercase">
+                        <Users className="text-indigo-600 w-7 h-7" /> Smart Queue
                     </h3>
-                    <p className="text-sm text-gray-500 font-bold mt-1 uppercase tracking-widest">Smart priority list</p>
+                    <p className="text-[10px] text-gray-400 font-black mt-2 uppercase tracking-[0.3em]">AI-prioritized reach outs</p>
                 </div>
 
-                <div className="space-y-6">
-                    {[
-                        { name: "Rahul S.", type: "Single", activity: "3 mins ago", temp: "hot", icon: <Flame className="text-orange-500" /> },
-                        { name: "Priya V.", type: "2 Sharing", activity: "1 hour ago", temp: "warm", icon: <Droplets className="text-blue-400" /> },
-                        { name: "Amit K.", type: "Single", activity: "5 hours ago", temp: "cold", icon: <Snowflake className="text-indigo-300" /> },
-                        { name: "Sanya M.", type: "3 Sharing", activity: "2 days ago", temp: "cold", icon: <Snowflake className="text-indigo-300" /> },
-                    ].map((lead, idx) => (
-                        <div key={idx} className="flex items-center justify-between p-4 rounded-2xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-all border border-transparent hover:border-gray-100 dark:hover:border-gray-700 group">
-                            <div className="flex items-center gap-4">
-                                <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded-xl group-hover:scale-110 transition-transform">
-                                    {lead.icon}
+                <div className="space-y-4">
+                    {smartQueue.length > 0 ? smartQueue.map((lead, idx) => (
+                        <motion.div
+                            key={idx}
+                            whileHover={{ x: 10, backgroundColor: "rgba(249, 250, 251, 0.5)" }}
+                            className="flex items-center justify-between p-5 rounded-3xl transition-all border border-transparent hover:border-gray-100 dark:hover:border-gray-800 group relative overflow-hidden"
+                        >
+                            <div className="flex items-center gap-5 relative z-10">
+                                <div className={`p-3 rounded-2xl bg-white dark:bg-gray-800 shadow-sm transition-transform group-hover:scale-110 ${lead.temp === 'hot' ? 'animate-pulse ring-2 ring-orange-500/20' : ''}`}>
+                                    {getIcon(lead.icon)}
                                 </div>
-                                <div>
-                                    <h4 className="font-black text-gray-900 dark:text-white tracking-tight">{lead.name}</h4>
-                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{lead.type} • {lead.activity}</p>
+                                <div className="space-y-1">
+                                    <h4 className="font-black text-gray-900 dark:text-white uppercase tracking-tighter text-lg">{lead.name}</h4>
+                                    <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.15em] whitespace-nowrap overflow-hidden text-ellipsis max-w-[150px]">{lead.type} • {lead.activity}</p>
                                 </div>
                             </div>
-                            <button className="p-2.5 rounded-xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-lg shadow-gray-200 dark:shadow-none translate-x-4 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all">
+                            <button className="p-3.5 rounded-2xl bg-indigo-600 text-white shadow-xl shadow-indigo-500/20 opacity-0 group-hover:opacity-100 transition-all active:scale-90 relative z-10">
                                 <Phone className="w-4 h-4" />
                             </button>
+                            <div className={`absolute left-0 top-0 bottom-0 w-1 ${lead.temp === 'hot' ? 'bg-orange-500' : lead.temp === 'warm' ? 'bg-blue-400' : 'bg-indigo-300'}`} />
+                        </motion.div>
+                    )) : (
+                        <div className="py-10 text-center border border-dashed border-gray-100 dark:border-gray-800 rounded-3xl">
+                            <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">No active leads in queue</p>
                         </div>
-                    ))}
+                    )}
                 </div>
 
-                <button className="w-full mt-8 py-4 bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400 font-black text-xs uppercase tracking-[0.2em] rounded-2xl hover:bg-violet-600 hover:text-white transition-all">
-                    Open Sales Dashboard
+                <button className="w-full mt-10 py-5 bg-indigo-600 text-white font-black text-[10px] uppercase tracking-[0.3em] rounded-[1.5rem] hover:bg-indigo-700 transition-all shadow-2xl shadow-indigo-500/30 active:scale-[0.98]">
+                    Launch Acquisition Lab
                 </button>
             </motion.div>
         </div>
