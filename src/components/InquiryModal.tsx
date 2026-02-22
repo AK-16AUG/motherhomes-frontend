@@ -34,7 +34,7 @@ export default function InquiryModal({ isOpen, onClose }: InquiryModalProps) {
         },
         location: formData.location,
         searchQuery: `Looking for PG/Flat in ${formData.location}`,
-        source: "website",
+        source: "popup",
       });
 
       toast.success("Thank you! We'll get back to you soon.");
