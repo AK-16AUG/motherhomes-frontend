@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom"; // Added useNavigate
 import {
   ChevronLeft,
   ChevronRight,
@@ -35,29 +36,52 @@ export default function RegisteredUserTable() {
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate(); // Initialize useNavigate
   const bulkUploadRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
+        setError(null); // Reset error
         const response = await instance.get(
           `${API_BASE_URL}?page=${currentPage}&limit=${entriesPerPage}`
         );
 
-        setData(response.data.users || []);
-        setTotalEntries(response.data.total || response.data.users.length || 0);
-        setTotalPages(Math.ceil(response.data.total / entriesPerPage) || 1);
+        const userData = response.data;
+        setData(userData.users || []);
+        setTotalEntries(userData.total || 0);
+        setTotalPages(Math.ceil((userData.total || 0) / entriesPerPage) || 1);
         setLoading(false);
-      } catch (err) {
-        setError("Failed to fetch data. Please try again later.");
+      } catch (err: any) {
+        console.error("Error fetching registered users:", err);
+
+        let errorMessage = "Failed to fetch data. Please try again later.";
+        if (err.response) {
+          const status = err.response.status;
+          const message = err.response.data?.message || err.message;
+          console.error(`Backend returned status ${status}:`, message);
+
+          if (status === 401) {
+            errorMessage = "Session expired. Redirecting to login...";
+            toast.error(errorMessage);
+            setTimeout(() => navigate("/signin"), 2000);
+          } else if (status === 403) {
+            errorMessage = "Access denied. You do not have permission to view users.";
+          } else {
+            errorMessage = `Server error (${status}): ${message}`;
+          }
+        } else if (err.request) {
+          errorMessage = "No response from server. Please check your connection.";
+        }
+
+        setError(errorMessage);
         setLoading(false);
-        console.error("Error fetching data:", err);
       }
     };
 
     fetchData();
-  }, [currentPage, entriesPerPage]);
+  }, [currentPage, entriesPerPage, navigate]);
 
   useEffect(() => {
     const delayedSearch = setTimeout(() => {

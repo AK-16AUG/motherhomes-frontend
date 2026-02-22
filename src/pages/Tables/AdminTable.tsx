@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Plus, Edit, Trash, X, Download, Upload, FileText } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import instance from "../../utils/Axios/Axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -30,6 +31,7 @@ export default function AdminTable() {
   const [form, setForm] = useState({ ...defaultForm });
   const [editId, setEditId] = useState<string | null>(null);
   const bulkUploadRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
 
   // Fetch all admins
   useEffect(() => {
@@ -37,8 +39,14 @@ export default function AdminTable() {
       try {
         const res = await instance.get("/user/admins");
         setAdmins(res.data);
-      } catch {
-        toast.error("Failed to fetch admins");
+      } catch (err: any) {
+        console.error("Error fetching admins:", err);
+        if (err.response?.status === 401) {
+          toast.error("Session expired. Redirecting to login...");
+          setTimeout(() => navigate("/signin"), 2000);
+        } else {
+          toast.error("Failed to fetch admins");
+        }
       } finally {
         setLoading(false);
       }
@@ -79,8 +87,14 @@ export default function AdminTable() {
       setShowModal(false);
       setForm({ ...defaultForm });
       setEditId(null);
-    } catch {
-      toast.error("Failed to save admin");
+    } catch (err: any) {
+      console.error("Error saving admin:", err);
+      if (err.response?.status === 401) {
+        toast.error("Session expired. Please login again.");
+        setTimeout(() => navigate("/signin"), 2000);
+      } else {
+        toast.error(err.response?.data?.message || "Failed to save admin");
+      }
     }
   };
 
@@ -105,8 +119,14 @@ export default function AdminTable() {
       await instance.delete(`/user/admin/${id}`);
       setAdmins((prev) => prev.filter((a) => a._id !== id));
       toast.success("Admin deleted!");
-    } catch {
-      toast.error("Failed to delete admin");
+    } catch (err: any) {
+      console.error("Error deleting admin:", err);
+      if (err.response?.status === 401) {
+        toast.error("Session expired. Please login again.");
+        setTimeout(() => navigate("/signin"), 2000);
+      } else {
+        toast.error("Failed to delete admin");
+      }
     }
   };
 
@@ -159,7 +179,15 @@ export default function AdminTable() {
       toast.success(`Bulk upload: ${successCount} admins added${errorCount > 0 ? `, ${errorCount} failed` : ""}.`);
       const res = await instance.get("/user/admins");
       setAdmins(res.data);
-    } catch { toast.error("Failed to process bulk upload file."); }
+    } catch (err: any) {
+      console.error("Bulk upload processing failed:", err);
+      if (err.response?.status === 401) {
+        toast.error("Session expired. Please login again.");
+        setTimeout(() => navigate("/signin"), 2000);
+      } else {
+        toast.error("Failed to process bulk upload file.");
+      }
+    }
     if (bulkUploadRef.current) bulkUploadRef.current.value = "";
   };
 

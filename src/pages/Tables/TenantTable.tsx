@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom"; // Added useNavigate
 import {
   ChevronLeft,
   ChevronRight,
@@ -106,40 +107,57 @@ export default function DataTable() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate(); // Initialize useNavigate
   const bulkUploadRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setLoading(true);
+        setError(null); // Reset error
         const [tenantsResponse, propertiesResponse] = await Promise.all([
           instance.get(API_BASE_URL),
           instance.get(PROPERTY_API_URL),
         ]);
 
+        console.log("Tenants API Response:", tenantsResponse.data);
         console.log("Properties API Response:", propertiesResponse.data);
 
         setData(tenantsResponse.data?.data || []);
 
-        // Extract properties correctly from the response structure
         const propertiesArray = propertiesResponse.data?.results || [];
-        console.log("Properties array:", propertiesArray);
-        console.log("Properties count:", propertiesArray.length);
-        console.log(
-          "Properties categories:",
-          propertiesArray.map((p: any) => p.category)
-        );
         setProperties(propertiesArray);
 
         setLoading(false);
-      } catch (err) {
-        setError("Failed to fetch data. Please try again later.");
+      } catch (err: any) {
+        console.error("Error fetching tenants/properties:", err);
+
+        let errorMessage = "Failed to fetch data. Please try again later.";
+        if (err.response) {
+          const status = err.response.status;
+          const message = err.response.data?.message || err.message;
+          console.error(`Backend returned status ${status}:`, message);
+
+          if (status === 401) {
+            errorMessage = "Session expired. Redirecting to login...";
+            toast.error(errorMessage);
+            setTimeout(() => navigate("/signin"), 2000);
+          } else if (status === 403) {
+            errorMessage = "Access denied. You do not have permission to view tenants.";
+          } else {
+            errorMessage = `Server error (${status}): ${message}`;
+          }
+        } else if (err.request) {
+          errorMessage = "No response from server. Please check your connection.";
+        }
+
+        setError(errorMessage);
         setLoading(false);
-        console.error("Error fetching data:", err);
         toast.error("Failed to fetch tenant data");
       }
     };
     fetchData();
-  }, []);
+  }, [navigate]);
 
   const filteredData = data.filter((tenant) => {
     if (!tenant) return false;

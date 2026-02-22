@@ -163,6 +163,10 @@ export default function App() {
               element={<Navigate to="/alllisting" replace />}
             />
             <Route
+              path="/properties"
+              element={<Navigate to="/alllisting" replace />}
+            />
+            <Route
               path="/users"
               element={
                 <ProtectedRoute allowedRoles={["admin", "superadmin"]}>

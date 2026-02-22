@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import instance from "../../utils/Axios/Axios";
 import Button from "../../components/ui/button/Button";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { LoadingSpinner } from "../../components/ui/loading";
 import { toast, ToastContainer } from "react-toastify";
 import * as XLSX from "xlsx";
@@ -47,6 +47,7 @@ export default function DataTableWithStatus() {
   const [editStatus, setEditStatus] = useState<Appointment["status"]>("Pending");
   const [editDate, setEditDate] = useState("");
   const bulkUploadRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
 
   const fetchAppointments = async (pageNum = 1, isLoadMore = false) => {
     try {
@@ -68,8 +69,14 @@ export default function DataTableWithStatus() {
       }
 
       setHasMore(newAppointments.length === entriesPerPage);
-    } catch (error) {
-      console.error("Error fetching appointments:", error);
+    } catch (err: any) {
+      console.error("Error fetching appointments:", err);
+      if (err.response?.status === 401) {
+        toast.error("Session expired. Redirecting to login...");
+        setTimeout(() => navigate("/signin"), 2000);
+      } else {
+        toast.error("Failed to fetch appointments");
+      }
     } finally {
       if (isLoadMore) {
         setLoadingMore(false);
@@ -128,9 +135,14 @@ export default function DataTableWithStatus() {
       ));
       toast.success("Appointment updated successfully!");
       setEditingId(null);
-    } catch (error) {
-      toast.error("Unable to update appointment");
-      console.error("Error updating appointment:", error);
+    } catch (err: any) {
+      console.error("Error updating appointment:", err);
+      if (err.response?.status === 401) {
+        toast.error("Session expired. Please login again.");
+        setTimeout(() => navigate("/signin"), 2000);
+      } else {
+        toast.error(err.response?.data?.message || "Unable to update appointment");
+      }
     } finally {
       setUpdating(null);
     }
@@ -179,8 +191,14 @@ export default function DataTableWithStatus() {
       // Note: bulk appointment creation requires user_id and property_id which are IDs
       // This template is for reference; actual bulk import needs ID mapping
       toast.warning("Bulk appointment upload requires valid user and property IDs. Please use the admin panel for individual appointments.");
-    } catch {
-      toast.error("Failed to process bulk upload file.");
+    } catch (err: any) {
+      console.error("Bulk upload processing failed:", err);
+      if (err.response?.status === 401) {
+        toast.error("Session expired. Please login again.");
+        setTimeout(() => navigate("/signin"), 2000);
+      } else {
+        toast.error("Failed to process bulk upload file.");
+      }
     }
     if (bulkUploadRef.current) bulkUploadRef.current.value = "";
   };

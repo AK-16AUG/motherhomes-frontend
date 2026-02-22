@@ -63,7 +63,7 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({ stats }) => {
                 trend="+12.5%"
                 trendColor="bg-emerald-100 text-emerald-700"
                 bgColor="bg-emerald-50 dark:bg-emerald-900/20"
-                onClick={() => navigate("/tenants")}
+                onClick={() => navigate("/alllisting")}
             />
             <KPICard
                 label="Active Users"
@@ -81,7 +81,7 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({ stats }) => {
                 trend="High Demand"
                 trendColor="bg-amber-100 text-amber-700"
                 bgColor="bg-amber-50 dark:bg-amber-900/20"
-                onClick={() => navigate("/properties")}
+                onClick={() => navigate("/alllisting")}
             />
             <KPICard
                 label="Total Leads"

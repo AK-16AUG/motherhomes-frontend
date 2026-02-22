@@ -8,7 +8,7 @@ import {
 import Badge from "../../ui/badge/Badge";
 import { useEffect, useState } from "react";
 import instance from "../../../utils/Axios/Axios";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Pencil, Trash2, Upload, Download, FileText } from "lucide-react";
 import { toast } from "react-toastify";
 import * as XLSX from "xlsx";
@@ -53,6 +53,7 @@ export default function ListingTable() {
   const [editingAvailabilityId, setEditingAvailabilityId] = useState<string | null>(null);
   const [availabilityEditValue, setAvailabilityEditValue] = useState<boolean>(true);
   const [isUploading, setIsUploading] = useState(false);
+  const navigate = useNavigate();
 
   const fetchProperties = async () => {
     try {
@@ -82,6 +83,7 @@ export default function ListingTable() {
     const fetchProperties = async () => {
       try {
         setState("loading");
+        setError(null);
         const response = await instance.get(`/property`);
 
         console.log("API Response:", response.data);
@@ -96,13 +98,29 @@ export default function ListingTable() {
         }
 
         setState("success");
-      } catch (error) {
-        console.error("Error fetching properties:", error);
-        setError(
-          error instanceof Error
-            ? error.message
-            : "Failed to load properties. Please try again later."
-        );
+      } catch (err: any) {
+        console.error("Error fetching properties:", err);
+
+        let errorMessage = "Failed to load properties. Please try again later.";
+        if (err.response) {
+          const status = err.response.status;
+          const message = err.response.data?.message || err.message;
+          console.error(`Backend returned status ${status}:`, message);
+
+          if (status === 401) {
+            errorMessage = "Session expired. Redirecting to login...";
+            toast.error(errorMessage);
+            setTimeout(() => navigate("/signin"), 2000);
+          } else if (status === 403) {
+            errorMessage = "Access denied. You do not have permission to view properties.";
+          } else {
+            errorMessage = `Server error (${status}): ${message}`;
+          }
+        } else if (err.request) {
+          errorMessage = "No response from server. Please check your connection.";
+        }
+
+        setError(errorMessage);
         setState("error");
       }
     };
@@ -168,8 +186,14 @@ export default function ListingTable() {
         )
       );
       toast.success("Availability updated");
-    } catch (error) {
-      toast.error("Failed to update availability");
+    } catch (err: any) {
+      console.error("Error updating availability:", err);
+      if (err.response?.status === 401) {
+        toast.error("Session expired. Please login again.");
+        setTimeout(() => navigate("/signin"), 2000);
+      } else {
+        toast.error(err.response?.data?.message || "Failed to update availability");
+      }
     }
   };
 
@@ -237,9 +261,16 @@ export default function ListingTable() {
 
       // Refresh the list
       fetchProperties();
-    } catch (error: any) {
-      console.error("Bulk upload failed:", error);
-      toast.error(error.response?.data?.message || "Bulk upload failed");
+    } catch (err: any) {
+      console.error("Bulk upload failed:", err);
+      toast.dismiss(); // Dismiss the loading toast
+
+      if (err.response?.status === 401) {
+        toast.error("Session expired. Please login again.");
+        setTimeout(() => navigate("/signin"), 2000);
+      } else {
+        toast.error(err.response?.data?.message || "Bulk upload failed");
+      }
     } finally {
       setIsUploading(false);
       // Reset input
@@ -259,12 +290,19 @@ export default function ListingTable() {
     try {
       await instance.delete(`/property/${propertyId}`);
       setProperties((prev) =>
-        prev.filter((property) => property._id !== propertyId)
+        prev.map((property) =>
+          property._id === propertyId ? { ...property, status: "Available" as "Available" | "Unavailable" | "Occupied" } : property
+        ).filter((property) => property._id !== propertyId)
       );
       toast.success("Property deleted successfully");
-    } catch (error) {
-      console.error("Error deleting property:", error);
-      toast.error("Failed to delete property");
+    } catch (err: any) {
+      console.error("Error deleting property:", err);
+      if (err.response?.status === 401) {
+        toast.error("Session expired. Please login again.");
+        setTimeout(() => navigate("/signin"), 2000);
+      } else {
+        toast.error(err.response?.data?.message || "Failed to delete property");
+      }
     }
   };
 

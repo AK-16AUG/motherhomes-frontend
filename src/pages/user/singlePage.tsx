@@ -34,7 +34,7 @@ interface PropertyData {
   _id: string;
   property_name: string;
   city: string;
-  category: "sale" | "rent"|"pg";
+  category: "sale" | "rent" | "pg";
   rate: number;
   area: number;
   bed: number;
@@ -45,7 +45,7 @@ interface PropertyData {
   amenties: Amenity[];
   services: Service[];
   perPersonPrice?: string;
-  totalCapacity?:string
+  totalCapacity?: string
 }
 
 interface FormData {
@@ -196,9 +196,8 @@ const ImageSlider: React.FC<ImageSliderProps> = ({
           {media.map((_, slideIndex) => (
             <button
               key={slideIndex}
-              className={`mx-1 w-2 h-2 rounded-full cursor-pointer transition-all ${
-                currentIndex === slideIndex ? "bg-white w-4" : "bg-white/50"
-              }`}
+              className={`mx-1 w-2 h-2 rounded-full cursor-pointer transition-all ${currentIndex === slideIndex ? "bg-white w-4" : "bg-white/50"
+                }`}
               onClick={() => goToSlide(slideIndex)}
               aria-label={`Go to slide ${slideIndex + 1}`}
             />
@@ -297,8 +296,8 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
             {typeof t === "object" && t !== null && "name" in t
               ? t.name
               : typeof t === "string"
-              ? t
-              : "Unknown"}
+                ? t
+                : "Unknown"}
           </span>
         ))}
       </div>
@@ -439,17 +438,15 @@ const CustomCalendar: React.FC<CalendarProps> = ({
           disabled={isDisabled}
           className={`
             w-8 h-8 text-sm rounded-md transition-colors
-            ${
-              isSelected
-                ? "bg-yellow-600 text-white font-semibold"
-                : isToday
+            ${isSelected
+              ? "bg-yellow-600 text-white font-semibold"
+              : isToday
                 ? "bg-yellow-100 text-yellow-800 font-medium"
                 : "hover:bg-gray-100"
             }
-            ${
-              isDisabled
-                ? "text-gray-300 cursor-not-allowed"
-                : "text-gray-700 cursor-pointer"
+            ${isDisabled
+              ? "text-gray-300 cursor-not-allowed"
+              : "text-gray-700 cursor-pointer"
             }
           `}
         >
@@ -486,10 +483,9 @@ const CustomCalendar: React.FC<CalendarProps> = ({
           w-full px-4 py-3 border border-gray-300 rounded-lg text-left
           focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent
           transition flex items-center justify-between
-          ${
-            disabled
-              ? "bg-gray-50 cursor-not-allowed"
-              : "bg-white hover:border-gray-400"
+          ${disabled
+            ? "bg-gray-50 cursor-not-allowed"
+            : "bg-white hover:border-gray-400"
           }
         `}
       >
@@ -675,9 +671,16 @@ const SingleListing: React.FC = () => {
           }));
         }
       }
-    } catch (error) {
+    } catch (err: any) {
       // If no appointment found or error, keep default state
-      console.log("No existing appointment found or error:", error);
+      console.log("No existing appointment found or error:", err);
+      if (err.response?.status === 401) {
+        // If 401, token might be invalid, but we don't necessarily want to redirect 
+        // immediately as the user might just be browsing. 
+        // However, we should clear the token if it's invalid.
+        // localStorage.removeItem("token");
+        // setIsLoggedIn(false);
+      }
     }
   }, [id]); // Add id as dependency
 
@@ -728,17 +731,16 @@ const SingleListing: React.FC = () => {
                 prop?.furnishing_type || "Furnishing not specified",
                 ...(Array.isArray(prop?.amenties)
                   ? prop.amenties
-                      .slice(0, 2)
-                      .map((amenity: Amenity) =>
-                        typeof amenity === "string"
-                          ? amenity
-                          : amenity?.name || "Unknown"
-                      )
+                    .slice(0, 2)
+                    .map((amenity: Amenity) =>
+                      typeof amenity === "string"
+                        ? amenity
+                        : amenity?.name || "Unknown"
+                    )
                   : []),
               ],
-              viewing: `${Math.floor(Math.random() * 5) + 1} Person${
-                Math.floor(Math.random() * 5) + 1 > 1 ? "s" : ""
-              } Viewing Today`,
+              viewing: `${Math.floor(Math.random() * 5) + 1} Person${Math.floor(Math.random() * 5) + 1 > 1 ? "s" : ""
+                } Viewing Today`,
               _id: prop?._id || Math.random().toString(),
             }))
           );
@@ -835,10 +837,18 @@ const SingleListing: React.FC = () => {
 
       // Better error message extraction
       let errorMessage = "Failed to schedule visit. Please try again.";
-      if (error && typeof error === "object" && "response" in error) {
-        const errorResponse = error as {
-          response?: { data?: { message?: string } };
+      if (err && typeof err === "object" && "response" in err) {
+        const errorResponse = err as {
+          response?: { data?: { message?: string }; status?: number };
         };
+
+        if (errorResponse.response?.status === 401) {
+          errorMessage = "Session expired or invalid token. Redirecting to login...";
+          toast.error(errorMessage);
+          setTimeout(() => navigate("/signin"), 2000);
+          return;
+        }
+
         errorMessage = errorResponse.response?.data?.message || errorMessage;
       }
 
@@ -945,17 +955,16 @@ const SingleListing: React.FC = () => {
                 <h1 className="text-2xl md:text-3xl font-bold flex flex-wrap items-center gap-3 mb-2">
                   {property?.property_name || "Untitled Property"}
                   <span
-                    className={`px-3 py-1 text-xs rounded-full font-semibold ${
-                      property?.category === "sale"
+                    className={`px-3 py-1 text-xs rounded-full font-semibold ${property?.category === "sale"
                         ? "bg-green-100 text-green-800"
                         : "bg-yellow-100 text-yellow-800"
-                    }`}
+                      }`}
                   >
-                 {property?.category === "sale"
-  ? "sale"
-  : property?.category === "pg"
-  ? "pg"
-  : "rent"}
+                    {property?.category === "sale"
+                      ? "sale"
+                      : property?.category === "pg"
+                        ? "pg"
+                        : "rent"}
 
                   </span>
                 </h1>
@@ -986,9 +995,8 @@ const SingleListing: React.FC = () => {
                 </div>
                 <div className="text-2xl md:text-3xl text-yellow-600 font-bold">
                   {property?.rate
-                    ? `₹${property.rate}${
-                        property?.category !== "sale" ? "/mo*" : ""
-                      }`
+                    ? `₹${property.rate}${property?.category !== "sale" ? "/mo*" : ""
+                    }`
                     : "Price not available"}
                 </div>
                 <div className="text-sm text-gray-600 mt-1">
@@ -1025,7 +1033,7 @@ const SingleListing: React.FC = () => {
                       <div className="flex items-center space-x-3">
                         <BedDouble className="w-6 h-6 text-yellow-600" />
                         <span className="text-lg font-medium text-gray-800">
-                          {property?.category === "pg" 
+                          {property?.category === "pg"
                             ? `${property?.totalCapacity || "N/A"} Capacity`
                             : `${property?.bed || "N/A"} BHK`
                           }
@@ -1033,9 +1041,8 @@ const SingleListing: React.FC = () => {
                       </div>
                       <span className="text-xl font-bold text-yellow-600">
                         {property?.rate
-                          ? `₹${property.rate}${
-                              property?.category !== "sale" ? "/mo*" : ""
-                            }`
+                          ? `₹${property.rate}${property?.category !== "sale" ? "/mo*" : ""
+                          }`
                           : "N/A"}
                       </span>
                     </div>

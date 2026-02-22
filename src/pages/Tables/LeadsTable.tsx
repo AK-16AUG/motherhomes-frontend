@@ -76,10 +76,14 @@ export default function LeadsTable() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const navigate = useNavigate(); // Initialize useNavigate
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
+        setError(null); // Reset error
+
         const [leadsResponse, propertiesResponse] = await Promise.all([
           instance.get(
             `${API_BASE_URL}?page=${currentPage}&limit=${entriesPerPage}`
@@ -87,29 +91,52 @@ export default function LeadsTable() {
           instance.get(PROPERTY_API_URL),
         ]);
 
-        console.log("API Response:", leadsResponse.data); // For debugging
-        console.log("Properties Response:", propertiesResponse.data); // For debugging
+        console.log("Leads API Response:", leadsResponse.data);
+        console.log("Properties API Response:", propertiesResponse.data);
+
+        const leadsData = leadsResponse.data;
+        const propData = propertiesResponse.data;
 
         // Update data extraction to match your API response format
-        setData(leadsResponse.data.results || []);
-        setTotalEntries(leadsResponse.data.total || 0);
+        setData(leadsData.results || []);
+        setTotalEntries(leadsData.total || 0);
         setTotalPages(
-          Math.ceil(leadsResponse.data.total / entriesPerPage) || 0
+          Math.ceil((leadsData.total || 0) / entriesPerPage) || 0
         );
 
         // Extract the results array from the properties response
-        setProperties(propertiesResponse.data.results || []);
+        setProperties(propData.results || []);
         setLoading(false);
-      } catch (err) {
-        setError("Failed to fetch data. Please try again later.");
+      } catch (err: any) {
+        console.error("Error fetching leads/properties data:", err);
+
+        let errorMessage = "Failed to fetch data. Please try again later.";
+        if (err.response) {
+          const status = err.response.status;
+          const message = err.response.data?.message || err.message;
+          console.error(`Backend returned status ${status}:`, message);
+
+          if (status === 401) {
+            errorMessage = "Session expired. Redirecting to login...";
+            toast.error(errorMessage);
+            setTimeout(() => navigate("/signin"), 2000);
+          } else if (status === 403) {
+            errorMessage = "Access denied. You do not have permission to view leads.";
+          } else {
+            errorMessage = `Server error (${status}): ${message}`;
+          }
+        } else if (err.request) {
+          errorMessage = "No response from server. Please check your connection.";
+        }
+
+        setError(errorMessage);
         setLoading(false);
-        console.error("Error fetching data:", err);
         toast.error("Failed to fetch leads data");
       }
     };
 
     fetchData();
-  }, [currentPage, entriesPerPage]);
+  }, [currentPage, entriesPerPage, navigate]); // Added navigate to dependency array
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -161,7 +188,8 @@ export default function LeadsTable() {
       setLoading(true);
       const leadData = {
         ...formData,
-        user_id: "current_user_id", // This should be replaced with actual user ID from auth context
+        user_id: localStorage.getItem("userId") || undefined, // Use actual user ID if available
+        matchedProperties: formData.matchedProperties,
       };
 
       await instance.post(API_BASE_URL, leadData);
