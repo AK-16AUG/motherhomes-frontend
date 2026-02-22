@@ -837,8 +837,8 @@ const SingleListing: React.FC = () => {
 
       // Better error message extraction
       let errorMessage = "Failed to schedule visit. Please try again.";
-      if (err && typeof err === "object" && "response" in err) {
-        const errorResponse = err as {
+      if (error && typeof error === "object" && "response" in error) {
+        const errorResponse = error as {
           response?: { data?: { message?: string }; status?: number };
         };
 
@@ -956,8 +956,8 @@ const SingleListing: React.FC = () => {
                   {property?.property_name || "Untitled Property"}
                   <span
                     className={`px-3 py-1 text-xs rounded-full font-semibold ${property?.category === "sale"
-                        ? "bg-green-100 text-green-800"
-                        : "bg-yellow-100 text-yellow-800"
+                      ? "bg-green-100 text-green-800"
+                      : "bg-yellow-100 text-yellow-800"
                       }`}
                   >
                     {property?.category === "sale"
