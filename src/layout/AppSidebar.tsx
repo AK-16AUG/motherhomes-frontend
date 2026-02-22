@@ -8,7 +8,7 @@ import {
   Users,
   MoreHorizontal
 } from "lucide-react";
-import home from "../assets/images/logo/home.png";
+import home from "../assets/home-icon.png";
 
 interface NavItem {
   icon: React.ReactNode;
