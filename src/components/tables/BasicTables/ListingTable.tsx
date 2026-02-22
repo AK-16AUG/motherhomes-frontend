@@ -226,9 +226,7 @@ export default function ListingTable() {
       setIsUploading(true);
       const loadingToast = toast.info("Uploading listing...", { autoClose: false });
 
-      const response = await instance.post("/property/bulk-upload", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const response = await instance.post("/property/bulk-upload", formData);
 
       toast.dismiss(loadingToast);
 

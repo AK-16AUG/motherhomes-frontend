@@ -1,47 +1,54 @@
 import { useEffect, useState } from "react";
 import instance from "../../utils/Axios/Axios";
-
-// Dashboard Cards and Charts
-import PerformanceOverview from "../../components/MainDash/PerformanceOverview";
-import AnalyticalCharts from "../../components/MainDash/AnalyticalCharts";
-import MonthlySalesChart from "../../components/MainDash/MonthlySalesChart";
-import MonthlyTarget from "../../components/MainDash/MonthlyTarget";
-import RecentAppointment from "../../components/MainDash/RecentAppointment";
 import PageMeta from "../../components/common/PageMeta";
 
-// Define interface for comprehensive stats
+// New Premium Components
+import MasterOverview from "../../components/Dashboard/MasterOverview";
+import RevenueIntelligence from "../../components/Dashboard/RevenueIntelligence";
+import OccupancyMap from "../../components/Dashboard/OccupancyMap";
+import LeadFunnel from "../../components/Dashboard/LeadFunnel";
+import TenantHealth from "../../components/Dashboard/TenantHealth";
+
+// Define interface for the new comprehensive stats
 interface DashboardStats {
   kpis: {
-    totalUsers: number;
-    activeUsers: number;
-    totalProperties: number;
-    occupiedProperties: number;
-    totalLeads: number;
-    totalAppointments: number;
-    totalRevenue: number;
+    revenueThisMonth: number;
     occupancyRate: number;
+    newLeads7Days: number;
+    bookingsConfirmed: number;
+    outstandingRent: number;
+    totalLeads: number;
+    vacantBeds: number;
   };
-  trends: {
-    users: any[];
-    leads: any[];
-    properties: any[];
+  revenueIntelligence: {
+    trend: any[];
+    byType: any[];
+    averageRent: number;
+  };
+  occupancyMap: any[];
+  leadFunnel: {
+    total: number;
+    funnel: any[];
+  };
+  insights: string[];
+  tenantHealth: {
+    atRisk: number;
   };
 }
 
 export default function Home() {
-  const [propertyData, setPropertyData] = useState([]);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
+    // Handle mobile view detection
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handleResize);
+
     async function fetchDashboardData() {
       try {
         setLoading(true);
-        // Fetch original property data for backward compatibility in smaller components if needed
-        const propRes = await instance.get("/property");
-        setPropertyData(propRes.data.results);
-
-        // Fetch new comprehensive stats
         const statsRes = await instance.get("/dashboard/comprehensive");
         setStats(statsRes.data);
       } catch (error) {
@@ -52,59 +59,84 @@ export default function Home() {
     }
 
     fetchDashboardData();
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="flex items-center justify-center h-screen bg-gray-50 dark:bg-gray-950">
+        <div className="relative">
+          <div className="h-24 w-24 rounded-full border-t-4 border-b-4 border-indigo-600 animate-spin" />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="h-12 w-12 rounded-full border-t-4 border-b-4 border-violet-500 animate-spin-reverse" />
+          </div>
+        </div>
       </div>
     );
   }
 
+  if (!stats) return null;
+
   return (
     <>
       <PageMeta
-        title="Admin Dashboard | MotherHome"
-        description="360 View of Site Performance"
+        title="PG Intelligence Dashboard | MotherHome"
+        description="Premium Management Insights"
       />
 
-      <div className="space-y-8">
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-12">
         {/* HEADER SECTION */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-gray-100 dark:border-gray-800 pb-10">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Performance Overview</h1>
-            <p className="text-gray-500 dark:text-gray-400">Total metrics and site health analysis</p>
+            <span className="text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-[0.3em] mb-2 block">
+              Global Operations
+            </span>
+            <h1 className="text-4xl md:text-5xl font-black text-gray-900 dark:text-white tracking-tighter">
+              Business Intelligence
+            </h1>
+            <p className="text-lg text-gray-500 font-medium mt-2">
+              Management & scaling automation for your PG network.
+            </p>
           </div>
-          <div className="flex gap-3">
-            <button className="px-4 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors">
-              Download Report
+          <div className="flex gap-4">
+            <button className="px-6 py-4 bg-white dark:bg-gray-900 border-2 border-gray-100 dark:border-gray-800 rounded-2xl text-xs font-black uppercase tracking-widest hover:border-gray-300 transition-all">
+              Export Audit
             </button>
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors">
-              Refresh Data
+            <button className="px-6 py-4 bg-indigo-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 shadow-xl shadow-indigo-500/20 transition-all">
+              System Refresh
             </button>
           </div>
         </div>
 
-        {/* KPI CARDS */}
-        {stats && <PerformanceOverview stats={stats.kpis} />}
-
-        {/* MAIN ANALYTICS */}
-        {stats && <AnalyticalCharts trends={stats.trends} kpis={stats.kpis} />}
-
-        <div className="grid grid-cols-12 gap-6">
-          <div className="col-span-12 xl:col-span-7">
-            <MonthlySalesChart propertyData={propertyData} />
+        {/* MOBILE SNAPSHOT MODE (Conditional Rendering) */}
+        {isMobile ? (
+          <div className="space-y-6">
+            <MasterOverview stats={stats.kpis} />
+            <div className="bg-white dark:bg-gray-900 p-8 rounded-[2rem] border border-gray-100 dark:border-gray-800 shadow-xl">
+              <h3 className="font-black text-gray-900 dark:text-white uppercase tracking-widest text-sm mb-4">Today's Visits</h3>
+              <button className="w-full py-4 bg-emerald-500 text-white font-black rounded-2xl text-xs uppercase tracking-widest">
+                Quick Call Next Lead
+              </button>
+            </div>
           </div>
+        ) : (
+          <>
+            {/* MASTER OVERVIEW (KPIs) */}
+            <MasterOverview stats={stats.kpis} />
 
-          <div className="col-span-12 xl:col-span-5">
-            <MonthlyTarget propertyData={propertyData} />
-          </div>
+            {/* REVENUE INTELLIGENCE */}
+            <RevenueIntelligence data={stats.revenueIntelligence} insights={stats.insights} />
 
-          <div className="col-span-12 xl:col-span-12">
-            <RecentAppointment />
-          </div>
-        </div>
+            {/* OCCUPANCY GRID */}
+            <OccupancyMap rooms={stats.occupancyMap} />
+
+            {/* LEAD FUNNEL */}
+            <LeadFunnel data={stats.leadFunnel} />
+
+            {/* TENANT HEALTH & ACTION CENTER */}
+            <TenantHealth atRisk={stats.tenantHealth.atRisk} insights={stats.insights} />
+          </>
+        )}
       </div>
     </>
   );
