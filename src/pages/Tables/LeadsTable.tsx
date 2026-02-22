@@ -78,6 +78,13 @@ export default function LeadsTable() {
   const [error, setError] = useState<string | null>(null);
 
   const navigate = useNavigate(); // Initialize useNavigate
+  const clearAuthAndRedirectToSignin = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("role");
+    localStorage.removeItem("userid");
+    localStorage.removeItem("userName");
+    navigate("/signin", { replace: true });
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -120,7 +127,7 @@ export default function LeadsTable() {
           if (status === 401) {
             errorMessage = "Session expired. Redirecting to login...";
             toast.error(errorMessage);
-            setTimeout(() => navigate("/signin"), 2000);
+            setTimeout(() => clearAuthAndRedirectToSignin(), 1200);
           } else if (status === 403) {
             errorMessage = "Access denied. You do not have permission to view leads.";
           } else {

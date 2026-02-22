@@ -87,7 +87,7 @@ export default function App() {
             <Route
               path="/appointments"
               element={
-                <ProtectedRoute allowedRoles={["admin", "user"]}>
+                <ProtectedRoute allowedRoles={["admin", "user", "superadmin"]}>
                   <AppointmentTables />
                 </ProtectedRoute>
               }
