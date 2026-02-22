@@ -86,10 +86,14 @@ export default function SignUpForm() {
       return;
     }
 
-    // Step 1: Send verification email - only check email
+    // Step 1: Send verification email - only check email and phone_no length
     if (verificationStep === 1) {
       if (!form.email) {
         toast.error("Email is required");
+        return;
+      }
+      if (form.phone_no.length !== 10) {
+        toast.error("The phone number must contain exactly 10 digits.");
         return;
       }
       await sendVerificationEmail();
