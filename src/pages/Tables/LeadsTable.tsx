@@ -1118,8 +1118,20 @@ export default function LeadsTable() {
                         {lead.status}
                       </span>
                     </td>
-                    <td className="py-2 px-4 whitespace-nowrap capitalize text-gray-900 dark:text-gray-100">
-                      {lead.source}
+                    <td className="py-2 px-4 whitespace-nowrap">
+                      {lead.source === "popup" ? (
+                        <span className="flex items-center gap-1.5 px-2 py-1 rounded w-fit bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300 text-xs font-bold uppercase tracking-wider border border-pink-200 dark:border-pink-800">
+                          <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-pink-500"></span>
+                          </span>
+                          Popup
+                        </span>
+                      ) : (
+                        <span className="capitalize text-gray-900 dark:text-gray-100 text-sm">
+                          {lead.source}
+                        </span>
+                      )}
                     </td>
                     <td className="py-2 px-4 whitespace-nowrap">
                       <span
