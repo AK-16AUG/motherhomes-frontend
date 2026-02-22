@@ -25,9 +25,14 @@ interface Property {
 
 interface Appointment {
   _id: string;
+  user_id?: {
+    _id?: string;
+    User_Name?: string;
+    email?: string;
+  };
   property_id?: Property;
   schedule_Time: string;
-  status: "Pending" | "Confirmed" | "Cancelled";
+  status: "Pending" | "Confirmed" | "Cancelled" | "Completed" | "Convert to lead";
   createdAt: string;
 }
 
@@ -35,6 +40,8 @@ const STATUS_BADGE_MAP = {
   Pending: { color: "yellow", label: "Pending" },
   Confirmed: { color: "green", label: "Confirmed" },
   Cancelled: { color: "red", label: "Cancelled" },
+  Completed: { color: "blue", label: "Completed" },
+  "Convert to lead": { color: "gray", label: "Convert to lead" },
 } as const;
 
 export default function AppointmentTable() {
@@ -65,14 +72,24 @@ export default function AppointmentTable() {
   const fetchAppointments = async () => {
     try {
       setState("loading");
-      const userId = localStorage.getItem("userid");
-      if (!userId) {
-        throw new Error("User ID not found");
+      const isAdminView = role === "admin" || role === "superadmin";
+      let appointmentsData: Appointment[] = [];
+
+      if (isAdminView) {
+        const response = await instance.get("/appointments?page=1&limit=1000");
+        appointmentsData = Array.isArray(response.data?.appointments?.data)
+          ? response.data.appointments.data
+          : [];
+      } else {
+        const userId = localStorage.getItem("userid");
+        if (!userId) {
+          throw new Error("User ID not found");
+        }
+        const response = await instance.get(`/appointments/user/${userId}`);
+        appointmentsData = Array.isArray(response.data?.appointment)
+          ? response.data.appointment
+          : [];
       }
-      const response = await instance.get(`/appointments/user/${userId}`);
-      const appointmentsData = Array.isArray(response.data?.appointment)
-        ? response.data.appointment
-        : [];
 
       // Sort appointments in descending order by createdAt date
       const sortedAppointments = appointmentsData.sort((a: Appointment, b: Appointment) => {
@@ -280,6 +297,11 @@ export default function AppointmentTable() {
         <Table aria-label="Appointments list">
           <TableHeader>
             <TableRow>
+              {(role === "admin" || role === "superadmin") && (
+                <TableCell isHeader className="text-left px-5 py-3">
+                  User
+                </TableCell>
+              )}
               <TableCell isHeader className="text-left px-5 py-3">
                 Property
               </TableCell>
@@ -304,6 +326,16 @@ export default function AppointmentTable() {
           <TableBody>
             {filteredAppointments.map((appointment) => (
               <TableRow key={appointment._id}>
+                {(role === "admin" || role === "superadmin") && (
+                  <TableCell className="text-left px-5 py-3">
+                    <div className="font-medium">
+                      {appointment.user_id?.User_Name || "Unknown"}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {appointment.user_id?.email || "-"}
+                    </div>
+                  </TableCell>
+                )}
                 <TableCell className="text-left px-5 py-3 font-medium">
                   {appointment.property_id?.property_name || "Unknown"}
                 </TableCell>
@@ -392,7 +424,9 @@ export default function AppointmentTable() {
                     </div>
                   ) : (
                     <div className="flex gap-2">
-                      {(role === "admin" || role === "agent") && (
+                      {(role === "admin" ||
+                        role === "superadmin" ||
+                        role === "agent") && (
                         <Button
                           size="sm"
                           variant="outline"

@@ -90,7 +90,9 @@ const Calendar: React.FC = () => {
   const fetchAppointments = async () => {
     try {
       setLoading(true);
-      const response = await instance.get<ApiResponse>("/appointments/calendar");
+      const response = await instance.get<ApiResponse>(
+        "/appointments?page=1&limit=1000"
+      );
       const fetchedAppointments = response?.data?.appointments?.data || [];
       setAppointments(fetchedAppointments);
 
