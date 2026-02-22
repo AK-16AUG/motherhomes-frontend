@@ -2,140 +2,96 @@ import { useEffect, useState } from "react";
 import instance from "../../utils/Axios/Axios";
 
 // Dashboard Cards and Charts
-import PerformanceOverview from "../../components/MainDash/PerformanceOverview";
-import AnalyticalCharts from "../../components/MainDash/AnalyticalCharts";
+import CardMetrics from "../../components/MainDash/DashBoardCards";
 import MonthlySalesChart from "../../components/MainDash/MonthlySalesChart";
+// import StatisticsChart from "../../components/MainDash/StatisticsChart";
 import MonthlyTarget from "../../components/MainDash/MonthlyTarget";
 import RecentAppointment from "../../components/MainDash/RecentAppointment";
-import RecentFlats from "../../components/MainDash/RecentFlats";
-import RecentTenants from "../../components/MainDash/RecentTenants";
+// import DemographicCard from "../../components/MainDash/DemographicCard";
 import PageMeta from "../../components/common/PageMeta";
 
-// Define interface for comprehensive stats
-interface DashboardStats {
-  kpis: {
-    totalUsers: number;
-    activeUsers: number;
-    totalProperties: number;
-    occupiedProperties: number;
-    totalLeads: number;
-    totalAppointments: number;
-    totalRevenue: number;
-    projectedRevenue: number; // New
-    occupancyRate: number;
-    vacantBeds: number;
-    outstandingRent: number;
-  };
-  revenueIntelligence: {
-    trend: any[];
-    byType: any[];
-  };
-  recentFlats: any[];
-  recentTenants: any[];
-  trends?: any; // For AnalyticalCharts
+// Define interface to match API response
+interface AppointmentData {
+  currentPage?: number;
+  data?: any[];
+  totalItems?: number;
+  totalPages?: number;
 }
 
 export default function Home() {
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [loading, setLoading] = useState(true);
+  // State to hold API data
+  const [propertyData, setPropertyData] = useState([]);
+  const [leadsData, setLeadsData] = useState([]);
+  const [appointmentData, setAppointmentData] = useState<AppointmentData>({});
 
   useEffect(() => {
-    async function fetchDashboardData() {
+    // Fetch properties
+    async function fetchProperties() {
       try {
-        setLoading(true);
-        // Fetch new comprehensive stats (optimized backend)
-        const statsRes = await instance.get("/dashboard/comprehensive");
-        setStats(statsRes.data);
+        const response = await instance.get("/property");
+        console.log("Property API response:", response.data);
+        setPropertyData(response.data.results);
       } catch (error) {
-        console.error("Dashboard data fetch error:", error);
-      } finally {
-        setLoading(false);
+        console.error("Property API error:", error);
+        setPropertyData([]);
       }
     }
 
-    fetchDashboardData();
-  }, []);
+    // Fetch leads
+    async function fetchLeads() {
+      try {
+        const response = await instance.get("/leads");
+        console.log("Leads API response:", response.data);
+        setLeadsData(response?.data?.results);
+      } catch (error) {
+        console.error("Leads API error:", error);
+        setLeadsData([]);
+      }
+    }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-gray-50 dark:bg-gray-900">
-        <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
-          <p className="text-gray-500 animate-pulse">Loading analytics...</p>
-        </div>
-      </div>
-    );
-  }
+    // Fetch appointments
+    async function fetchAppointments() {
+      try {
+        const response = await instance.get("/appointments");
+        console.log("Appointments API response:", response.data);
+        // Store the whole object with currentPage, data, totalItems, etc.
+        setAppointmentData(response.data);
+      } catch (error) {
+        console.error("Appointments API error:", error);
+        setAppointmentData({}); // default empty object
+      }
+    }
+
+    fetchProperties();
+    fetchLeads();
+    fetchAppointments();
+  }, []);
 
   return (
     <>
       <PageMeta
-        title="Admin Dashboard | MotherHome"
-        description="360 View of Site Performance"
+        title="MotherHome"
+        description="Mother Home PG and Rental place"
       />
-
-      <div className="space-y-6">
-        {/* HEADER SECTION */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Admin Dashboard</h1>
-            <p className="text-gray-500 dark:text-gray-400">Real-time property and tenant insights</p>
-          </div>
-          <div className="flex gap-3">
-            <button className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors">
-              Report
-            </button>
-            <button
-              onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/20"
-            >
-              Refresh
-            </button>
-          </div>
-        </div>
-
-        {/* KPI CARDS */}
-        {stats && (
-          <PerformanceOverview
-            stats={{
-              ...stats.kpis,
-              // Use projectedRevenue for total revenue display if preferred by user
-              totalRevenue: stats.kpis.projectedRevenue
-            }}
+      <div className="grid grid-cols-12 gap-4 md:gap-6">
+        <div className="col-span-12 space-y-6 xl:col-span-7">
+          <CardMetrics
+            leadsData={leadsData}
+            appointmentData={appointmentData}
           />
-        )}
 
-        {/* MAIN ANALYTICS */}
-        {stats && (
-          <AnalyticalCharts
-            trends={stats.trends}
-            kpis={{
-              totalProperties: stats.kpis.totalProperties,
-              occupiedProperties: stats.kpis.occupiedProperties
-            }}
-          />
-        )}
-
-        {/* RECENT LISTS SECTION */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {stats && <RecentFlats flats={stats.recentFlats} />}
-          {stats && <RecentTenants tenants={stats.recentTenants} />}
+          <MonthlySalesChart propertyData={propertyData} />
         </div>
 
-        {/* CHARTS SECTION */}
-        <div className="grid grid-cols-12 gap-6">
-          <div className="col-span-12 xl:col-span-7">
-            {/* We can pass empty for now or use revenueIntelligence.trend if compatible */}
-            <MonthlySalesChart propertyData={[]} />
-          </div>
-
-          <div className="col-span-12 xl:col-span-5">
-            <MonthlyTarget propertyData={[]} />
-          </div>
+        <div className="col-span-12 xl:col-span-5">
+          <MonthlyTarget propertyData={propertyData} />
         </div>
 
-        {/* RECENT APPOINTMENTS */}
-        <div className="col-span-12">
+        {/* <div className="col-span-12">
+          <StatisticsChart propertyData={propertyData} leadsData={leadsData} />
+        </div> */}
+
+        <div className="col-span-12 xl:col-span-7">
           <RecentAppointment />
         </div>
       </div>
