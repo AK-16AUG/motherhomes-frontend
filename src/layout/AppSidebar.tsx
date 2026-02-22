@@ -70,11 +70,14 @@ const AppSidebar: React.FC = () => {
       {
         icon: <Users className="w-5 h-5" />,
         name: "Tenants",
-        path: "/tenants",
-        subItems: [
-          { name: "All Tenants", path: "/tenantinfo", pro: false },
-          { name: "Active Residents", path: "/infotenant", pro: false },
-        ],
+        path: "/alllisting",
+        pro: false,
+      },
+      {
+        icon: <Users className="w-5 h-5" />,
+        name: "Users",
+        path: "/users",
+        pro: false,
       },
       {
         icon: <Calendar className="w-5 h-5" />,

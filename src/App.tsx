@@ -159,6 +159,18 @@ export default function App() {
               }
             />
             <Route
+              path="/tenants"
+              element={<Navigate to="/alllisting" replace />}
+            />
+            <Route
+              path="/users"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "superadmin"]}>
+                  <RegisteredUserTable />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/allregistereduser"
               element={
                 <ProtectedRoute allowedRoles={["admin", "superadmin"]}>
