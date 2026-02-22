@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { Users, Target, TrendingUp, DollarSign } from "lucide-react";
+import { Users, Home, Target, Calendar, TrendingUp, DollarSign } from "lucide-react";
 
 interface KPIProps {
     label: string;

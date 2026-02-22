@@ -111,6 +111,14 @@ export default function LeadsTable() {
     fetchData();
   }, [currentPage, entriesPerPage]);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const searchParam = params.get("search");
+    if (searchParam) {
+      setSearchTerm(searchParam);
+    }
+  }, []);
+
   const handleInputChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
@@ -346,6 +354,7 @@ export default function LeadsTable() {
           const phone = lead.contactInfo?.phone?.toLowerCase() || "";
           const status = lead.status?.toLowerCase() || "";
           const source = lead.source?.toLowerCase() || "";
+          const id = lead._id?.toLowerCase() || "";
           const searchLower = searchTerm.toLowerCase();
 
           return (
@@ -353,7 +362,8 @@ export default function LeadsTable() {
             email.includes(searchLower) ||
             phone.includes(searchLower) ||
             status.includes(searchLower) ||
-            source.includes(searchLower)
+            source.includes(searchLower) ||
+            id.includes(searchLower)
           );
         });
 

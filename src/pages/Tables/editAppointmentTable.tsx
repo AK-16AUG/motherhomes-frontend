@@ -84,6 +84,14 @@ export default function DataTableWithStatus() {
     fetchAppointments(1);
   }, [searchTerm, entriesPerPage]);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const searchParam = params.get("search");
+    if (searchParam) {
+      setSearchTerm(searchParam);
+    }
+  }, []);
+
   const loadMore = () => {
     const nextPage = page + 1;
     setPage(nextPage);
@@ -177,13 +185,22 @@ export default function DataTableWithStatus() {
     if (bulkUploadRef.current) bulkUploadRef.current.value = "";
   };
 
-  const filteredData = data.filter((appointment) =>
-    Object.values(appointment).some(
-      (value) =>
-        typeof value === "string" &&
-        value.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  );
+  const filteredData = data.filter((appointment) => {
+    const searchLower = searchTerm.toLowerCase();
+    const id = appointment._id?.toLowerCase() || "";
+    const userName = appointment.user_id?.User_Name?.toLowerCase() || "";
+    const userEmail = appointment.user_id?.email?.toLowerCase() || "";
+    const propertyName = appointment.property_id?.property_name?.toLowerCase() || "";
+    const status = appointment.status?.toLowerCase() || "";
+
+    return (
+      id.includes(searchLower) ||
+      userName.includes(searchLower) ||
+      userEmail.includes(searchLower) ||
+      propertyName.includes(searchLower) ||
+      status.includes(searchLower)
+    );
+  });
 
   const totalPages = Math.ceil(filteredData.length / entriesPerPage);
   const currentData = filteredData.slice(
