@@ -11,12 +11,12 @@ interface KPIProps {
     delay: number;
 }
 
-const colorMap: Record<string, { bg: string, text: string, ring: string, blur: string }> = {
-    emerald: { bg: "bg-emerald-50", text: "text-emerald-600 dark:text-emerald-400", ring: "ring-emerald-500/10", blur: "bg-emerald-500" },
-    blue: { bg: "bg-blue-50", text: "text-blue-600 dark:text-blue-400", ring: "ring-blue-500/10", blur: "bg-blue-500" },
-    purple: { bg: "bg-purple-50", text: "text-purple-600 dark:text-purple-400", ring: "ring-purple-500/10", blur: "bg-purple-500" },
-    amber: { bg: "bg-amber-50", text: "text-amber-600 dark:text-amber-400", ring: "ring-amber-500/10", blur: "bg-amber-500" },
-    rose: { bg: "bg-rose-50", text: "text-rose-600 dark:text-rose-400", ring: "ring-rose-500/10", blur: "bg-rose-500" },
+const colorMap: Record<string, { bg: string, text: string }> = {
+    emerald: { bg: "bg-emerald-50", text: "text-emerald-600 dark:text-emerald-400" },
+    blue: { bg: "bg-blue-50", text: "text-blue-600 dark:text-blue-400" },
+    purple: { bg: "bg-purple-50", text: "text-purple-600 dark:text-purple-400" },
+    amber: { bg: "bg-amber-50", text: "text-amber-600 dark:text-amber-400" },
+    rose: { bg: "bg-rose-50", text: "text-rose-600 dark:text-rose-400" },
 };
 
 const KPICard: React.FC<KPIProps> = ({ label, value, subtext, icon, color, delay }) => {
@@ -24,43 +24,30 @@ const KPICard: React.FC<KPIProps> = ({ label, value, subtext, icon, color, delay
 
     return (
         <motion.div
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            whileHover={{ scale: 1.02, y: -5 }}
-            transition={{ type: "spring", stiffness: 300, damping: 20, delay }}
-            className="group relative overflow-hidden bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl rounded-[2rem] p-6 shadow-2xl shadow-gray-200/50 dark:shadow-none border border-white dark:border-gray-800"
+            transition={{ duration: 0.4, delay }}
+            className="bg-white dark:bg-gray-900 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800"
         >
-            <div className={`absolute top-0 right-0 w-32 h-32 -mr-16 -mt-16 rounded-full opacity-10 blur-3xl group-hover:opacity-30 transition-opacity ${colors.blur}`} />
-
-            <div className="flex items-start justify-between relative z-10">
-                <div className="space-y-4">
-                    <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">
+            <div className="flex items-start justify-between">
+                <div className="space-y-3">
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
                         {label}
                     </p>
                     <div>
-                        <h3 className="text-3xl font-black text-gray-900 dark:text-white tracking-tighter">
+                        <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
                             {value}
                         </h3>
                         {subtext && (
-                            <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-                                <span className="h-1 w-1 rounded-full bg-emerald-500 animate-pulse" />
+                            <div className="mt-1.5 inline-flex items-center gap-1.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
                                 {subtext}
                             </div>
                         )}
                     </div>
                 </div>
-                <motion.div
-                    whileHover={{ rotate: 15, scale: 1.1 }}
-                    className={`p-4 rounded-2xl ${colors.bg} dark:bg-gray-800 ${colors.text} ring-1 ring-inset ${colors.ring} shadow-lg shadow-gray-200/20 dark:shadow-none`}
-                >
-                    {icon}
-                </motion.div>
-            </div>
-
-            <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-800/50">
-                <button className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 group-hover:tracking-widest transition-all uppercase">
-                    View Intelligence Summary →
-                </button>
+                <div className={`p-3 rounded-xl ${colors.bg} dark:bg-gray-800 ${colors.text}`}>
+                    {React.isValidElement(icon) ? React.cloneElement(icon as React.ReactElement<any>, { size: 20 }) : icon}
+                </div>
             </div>
         </motion.div>
     );
@@ -95,7 +82,7 @@ const MasterOverview: React.FC<MasterOverviewProps> = ({ stats }) => {
                 label="Revenue This Month"
                 value={`₹${revenue.toLocaleString()}`}
                 subtext={`${revenueGrowth >= 0 ? '+' : ''}${revenueGrowth.toFixed(1)}% vs last month`}
-                icon={<DollarSign className="w-6 h-6" />}
+                icon={<DollarSign />}
                 color="emerald"
                 delay={0.1}
             />
@@ -103,7 +90,7 @@ const MasterOverview: React.FC<MasterOverviewProps> = ({ stats }) => {
                 label="Occupancy Rate"
                 value={`${occupancy.toFixed(1)}%`}
                 subtext={`${vacant} beds vacant`}
-                icon={<Home className="w-6 h-6" />}
+                icon={<Home />}
                 color="blue"
                 delay={0.2}
             />
@@ -111,7 +98,7 @@ const MasterOverview: React.FC<MasterOverviewProps> = ({ stats }) => {
                 label="New Leads (7 Days)"
                 value={leads}
                 subtext={`${leadGrowth >= 0 ? '+' : ''}${leadGrowth.toFixed(1)}% velocity`}
-                icon={<Users className="w-6 h-6" />}
+                icon={<Users />}
                 color="purple"
                 delay={0.3}
             />
@@ -119,7 +106,7 @@ const MasterOverview: React.FC<MasterOverviewProps> = ({ stats }) => {
                 label="Bookings Confirmed"
                 value={bookings}
                 subtext="Last 7 days"
-                icon={<CheckCircle className="w-6 h-6" />}
+                icon={<CheckCircle />}
                 color="amber"
                 delay={0.4}
             />
@@ -127,7 +114,7 @@ const MasterOverview: React.FC<MasterOverviewProps> = ({ stats }) => {
                 label="Outstanding Rent"
                 value={`₹${outstanding.toLocaleString()}`}
                 subtext={outstanding > 0 ? "Action required" : "All clear"}
-                icon={<AlertCircle className="w-6 h-6" />}
+                icon={<AlertCircle />}
                 color="rose"
                 delay={0.5}
             />

@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
 import instance from "../../utils/Axios/Axios";
 import PageMeta from "../../components/common/PageMeta";
 
@@ -41,9 +40,10 @@ interface DashboardStats {
   };
   smartQueue: {
     name: string;
+    phone: string;
     type: string;
     activity: string;
-    temp: string;
+    temp: 'hot' | 'warm' | 'cold';
     icon: string;
   }[];
 }
@@ -86,16 +86,8 @@ export default function Home() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50 dark:bg-gray-950">
-        <div className="relative mb-8">
-          <div className="h-32 w-32 rounded-full border-t-4 border-indigo-600 animate-spin" />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="h-20 w-20 rounded-full border-b-4 border-violet-500 animate-spin-reverse opacity-50" />
-          </div>
-        </div>
-        <div className="space-y-2 text-center">
-          <h2 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-[0.3em]">MotherHome Intelligence</h2>
-          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest animate-pulse">Synchronizing Global Asset Data...</p>
-        </div>
+        <div className="h-12 w-12 border-4 border-indigo-600/20 border-t-indigo-600 rounded-full animate-spin mb-4" />
+        <p className="text-sm font-medium text-gray-500 uppercase tracking-widest animate-pulse">Loading Analytics Data...</p>
       </div>
     );
   }
@@ -103,17 +95,14 @@ export default function Home() {
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-white dark:bg-gray-950 p-6 text-center">
-        <div className="bg-gray-50 dark:bg-gray-900/50 p-12 rounded-[3.5rem] shadow-2xl border border-gray-100 dark:border-gray-800 max-w-lg">
-          <div className="w-20 h-20 bg-rose-50 dark:bg-rose-500/10 rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-inner">
-            <span className="text-rose-600 text-4xl font-black italic">!</span>
-          </div>
-          <h2 className="text-3xl font-black text-gray-900 dark:text-white mb-4 tracking-tighter uppercase">Neural Link Interrupted</h2>
-          <p className="text-gray-500 font-medium mb-10 leading-relaxed text-lg">{error}</p>
+        <div className="max-w-md">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Something went wrong</h2>
+          <p className="text-gray-500 mb-6">{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="w-full py-5 bg-indigo-600 text-white rounded-2xl text-xs font-black uppercase tracking-[0.3em] hover:bg-indigo-700 transition-all shadow-2xl shadow-indigo-500/30"
+            className="px-6 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-colors"
           >
-            Reconnect Terminal
+            Try Again
           </button>
         </div>
       </div>
@@ -129,42 +118,29 @@ export default function Home() {
         description="Premium Asset Management Insights"
       />
 
-      <div className="max-w-[1700px] mx-auto px-6 sm:px-10 lg:px-12 py-12 space-y-16">
+      <div className="max-w-[1600px] mx-auto px-6 py-8 space-y-10">
         {/* HEADER SECTION */}
-        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-10 border-b border-gray-100 dark:border-gray-800 pb-12">
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-[0.4em]">
-                Live Analytics Terminal
-              </span>
-            </div>
-            <h1 className="text-5xl md:text-7xl font-black text-gray-900 dark:text-white tracking-tightest leading-tight">
-              Operational <br /> Intelligence
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-gray-100 dark:border-gray-800 pb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              Dashboard Overview
             </h1>
-            <div className="flex items-center gap-4 text-gray-400 font-bold text-xs uppercase tracking-widest pt-2">
-              <p>Network: PG-GLOBAL-NODE-01</p>
-              <span>•</span>
-              <p>Status: Optimized</p>
-            </div>
+            <p className="text-sm text-gray-500 mt-1">
+              Asset management and operational insights
+            </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center gap-6">
-            <div className="text-right sm:pr-8 sm:border-r border-gray-100 dark:border-gray-800">
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Last Update</p>
-              <p className="text-lg font-black text-gray-900 dark:text-white tracking-tighter">{lastUpdated}</p>
+          <div className="flex items-center gap-6">
+            <div className="hidden sm:block text-right pr-6 border-r border-gray-100 dark:border-gray-800">
+              <p className="text-xs text-gray-400 mb-1">Last updated</p>
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">{lastUpdated}</p>
             </div>
-            <div className="flex gap-4">
-              <button className="group px-8 py-5 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:border-indigo-600 transition-all text-gray-600 dark:text-gray-300 shadow-xl shadow-gray-100/50 dark:shadow-none">
-                Export Audit <span className="inline-block transform group-hover:translate-y-[-2px] transition-transform">↓</span>
-              </button>
-              <button
-                onClick={() => window.location.reload()}
-                className="px-8 py-5 bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-indigo-700 shadow-2xl shadow-indigo-500/40 transition-all hover:scale-[1.02] active:scale-[0.98]"
-              >
-                Refresh System
-              </button>
-            </div>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20"
+            >
+              Refresh Data
+            </button>
           </div>
         </div>
 
@@ -204,43 +180,6 @@ export default function Home() {
           </>
         )}
 
-        {/* PREMIUM QUICK ACTION DIAL */}
-        <div className="fixed bottom-12 right-12 z-50 flex flex-col items-center gap-4">
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col items-end gap-3 mb-4"
-          >
-            {[
-              { label: "New Lead", color: "bg-orange-500", icon: "󱗿" },
-              { label: "Add Property", color: "bg-indigo-600", icon: "󰙅" },
-              { label: "Global Audit", color: "bg-emerald-500", icon: "󰒔" }
-            ].map((action, i) => (
-              <motion.button
-                key={i}
-                initial={{ opacity: 0, x: 20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.1 }}
-                whileHover={{ scale: 1.05 }}
-                className="flex items-center gap-3 group"
-              >
-                <span className="px-4 py-2 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-900 dark:text-white shadow-xl opacity-0 group-hover:opacity-100 transition-opacity border border-gray-100 dark:border-gray-800">
-                  {action.label}
-                </span>
-                <div className={`w-14 h-14 ${action.color} rounded-2xl flex items-center justify-center text-white text-xl shadow-2xl shadow-gray-200/50 dark:shadow-none hover:rotate-12 transition-transform`}>
-                  {action.icon}
-                </div>
-              </motion.button>
-            ))}
-          </motion.div>
-          <motion.button
-            whileHover={{ scale: 1.1, rotate: 90 }}
-            whileTap={{ scale: 0.9 }}
-            className="h-20 w-20 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-[2rem] flex items-center justify-center text-4xl font-light shadow-2xl shadow-indigo-500/20"
-          >
-            +
-          </motion.button>
-        </div>
       </div>
     </>
   );

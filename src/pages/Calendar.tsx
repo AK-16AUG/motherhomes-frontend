@@ -18,6 +18,7 @@ import {
   MapPin,
   ChevronLeft,
   ChevronRight,
+  RefreshCcw,
 } from "lucide-react";
 import { LoadingButton, LoadingSpinner } from "../components/ui/loading";
 
@@ -82,12 +83,14 @@ const Calendar: React.FC = () => {
 
   useEffect(() => {
     fetchAppointments();
+    const interval = setInterval(fetchAppointments, 5 * 60 * 1000); // 5 minutes
+    return () => clearInterval(interval);
   }, []);
 
   const fetchAppointments = async () => {
     try {
       setLoading(true);
-      const response = await instance.get<ApiResponse>("/appointments");
+      const response = await instance.get<ApiResponse>("/appointments/calendar");
       const fetchedAppointments = response?.data?.appointments?.data || [];
       setAppointments(fetchedAppointments);
 
@@ -142,13 +145,11 @@ const Calendar: React.FC = () => {
       case "dayGridMonth":
         return `${userName}`;
       case "timeGridWeek":
-        return `${userName} - ${propertyName.substring(0, 20)}${
-          propertyName.length > 20 ? "..." : ""
-        }`;
+        return `${userName} - ${propertyName.substring(0, 20)}${propertyName.length > 20 ? "..." : ""
+          }`;
       case "timeGridDay":
-        return `${userName}\n${propertyName}\n${
-          appointment?.phone || "No phone"
-        }`;
+        return `${userName}\n${propertyName}\n${appointment?.phone || "No phone"
+          }`;
       default:
         return `${userName} - ${propertyName}`;
     }
@@ -291,8 +292,8 @@ const Calendar: React.FC = () => {
       const oldAppointment = appointments.find((a) => a._id === id);
       const oldDate = oldAppointment
         ? new Date(oldAppointment?.schedule_Time || oldAppointment?.createdAt)
-            .toISOString()
-            .split("T")[0]
+          .toISOString()
+          .split("T")[0]
         : "";
 
       if (oldDate !== newDate) {
@@ -313,16 +314,16 @@ const Calendar: React.FC = () => {
         prev.map((event) =>
           event?.id === id
             ? {
-                ...event,
-                start: updatedData.schedule_Time,
-                extendedProps: {
-                  ...event?.extendedProps,
-                  status: updatedData.status,
-                },
-                backgroundColor: getStatusColor(updatedData.status).bg,
-                borderColor: getStatusColor(updatedData.status).border,
-                textColor: getStatusColor(updatedData.status).text,
-              }
+              ...event,
+              start: updatedData.schedule_Time,
+              extendedProps: {
+                ...event?.extendedProps,
+                status: updatedData.status,
+              },
+              backgroundColor: getStatusColor(updatedData.status).bg,
+              borderColor: getStatusColor(updatedData.status).border,
+              textColor: getStatusColor(updatedData.status).text,
+            }
             : event
         )
       );
@@ -380,9 +381,8 @@ const Calendar: React.FC = () => {
     return (
       <div className="h-full min-h-[60px] flex flex-col">
         <div
-          className={`self-start mb-auto ${
-            isToday ? "font-bold text-blue-600" : ""
-          }`}
+          className={`self-start mb-auto ${isToday ? "font-bold text-blue-600" : ""
+            }`}
         >
           {arg.dayNumberText}
         </div>
@@ -424,11 +424,10 @@ const Calendar: React.FC = () => {
     return (
       <div
         key={appointment._id}
-        className={`relative overflow-hidden rounded-lg border transition-all duration-200 ${
-          isEditing
-            ? "bg-blue-50 border-blue-200 shadow-md"
-            : "bg-white border-gray-200 hover:border-gray-300 hover:shadow-sm"
-        }`}
+        className={`relative overflow-hidden rounded-lg border transition-all duration-200 ${isEditing
+          ? "bg-blue-50 border-blue-200 shadow-md"
+          : "bg-white border-gray-200 hover:border-gray-300 hover:shadow-sm"
+          }`}
       >
         {/* Status indicator bar */}
         <div
@@ -630,31 +629,28 @@ const Calendar: React.FC = () => {
             <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
               <button
                 onClick={() => handleViewChange("dayGridMonth")}
-                className={`px-3 py-1.5 text-sm rounded-md font-medium transition-all ${
-                  currentView === "dayGridMonth"
-                    ? "bg-white text-blue-600 shadow-sm"
-                    : "text-gray-600 hover:text-gray-800"
-                }`}
+                className={`px-3 py-1.5 text-sm rounded-md font-medium transition-all ${currentView === "dayGridMonth"
+                  ? "bg-white text-blue-600 shadow-sm"
+                  : "text-gray-600 hover:text-gray-800"
+                  }`}
               >
                 Month
               </button>
               <button
                 onClick={() => handleViewChange("timeGridWeek")}
-                className={`px-3 py-1.5 text-sm rounded-md font-medium transition-all ${
-                  currentView === "timeGridWeek"
-                    ? "bg-white text-blue-600 shadow-sm"
-                    : "text-gray-600 hover:text-gray-800"
-                }`}
+                className={`px-3 py-1.5 text-sm rounded-md font-medium transition-all ${currentView === "timeGridWeek"
+                  ? "bg-white text-blue-600 shadow-sm"
+                  : "text-gray-600 hover:text-gray-800"
+                  }`}
               >
                 Week
               </button>
               <button
                 onClick={() => handleViewChange("timeGridDay")}
-                className={`px-3 py-1.5 text-sm rounded-md font-medium transition-all ${
-                  currentView === "timeGridDay"
-                    ? "bg-white text-blue-600 shadow-sm"
-                    : "text-gray-600 hover:text-gray-800"
-                }`}
+                className={`px-3 py-1.5 text-sm rounded-md font-medium transition-all ${currentView === "timeGridDay"
+                  ? "bg-white text-blue-600 shadow-sm"
+                  : "text-gray-600 hover:text-gray-800"
+                  }`}
               >
                 Day
               </button>
@@ -684,6 +680,17 @@ const Calendar: React.FC = () => {
               >
                 Today
               </button>
+              <button
+                onClick={fetchAppointments}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors group"
+                title="Refresh Calendar"
+                disabled={loading}
+              >
+                <RefreshCcw
+                  size={20}
+                  className={`${loading ? "animate-spin text-blue-600" : "text-gray-600 hover:text-gray-800"}`}
+                />
+              </button>
             </div>
 
             <div className="text-right">
@@ -709,9 +716,8 @@ const Calendar: React.FC = () => {
       <div className="flex flex-col lg:flex-row flex-grow min-h-0 overflow-hidden relative">
         {/* Calendar section */}
         <div
-          className={`${
-            showSidebar ? "lg:w-[70%]" : "w-full"
-          } flex-grow min-h-0`}
+          className={`${showSidebar ? "lg:w-[70%]" : "w-full"
+            } flex-grow min-h-0`}
         >
           <FullCalendar
             ref={calendarRef}
@@ -732,8 +738,8 @@ const Calendar: React.FC = () => {
               currentView === "dayGridMonth"
                 ? 1.35
                 : currentView === "timeGridWeek"
-                ? 1.8
-                : 2.2
+                  ? 1.8
+                  : 2.2
             }
             eventDisplay={
               currentView === "dayGridMonth" ? "background" : "block"

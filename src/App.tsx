@@ -8,13 +8,10 @@ import SignIn from "./pages/AuthPages/SignIn";
 import SignUp from "./pages/AuthPages/SignUp";
 import NotFound from "./pages/OtherPage/NotFound";
 import UserProfiles from "./pages/UserProfiles";
-import LineChart from "./pages/Charts/LineChart";
-import BarChart from "./pages/Charts/BarChart";
 import Calendar from "./pages/Calendar";
 import AllListing from "./pages/Tables/ListingTable";
 import AppointmentTables from "./pages/Tables/AppointmentTable";
 import Addlisting from "./pages/Forms/ListingForm";
-import Blank from "./pages/Blank";
 import AppLayout from "./layout/AppLayout";
 import { ScrollToTop } from "./components/common/ScrollToTop";
 import Home from "./pages/Dashboard/Home";
@@ -186,26 +183,10 @@ export default function App() {
               }
             />
             <Route
-              path="/line-chart"
+              path="/tenant/:id"
               element={
                 <ProtectedRoute allowedRoles={["admin", "superadmin"]}>
-                  <LineChart />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/bar-chart"
-              element={
-                <ProtectedRoute allowedRoles={["admin", "superadmin"]}>
-                  <BarChart />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/blank"
-              element={
-                <ProtectedRoute allowedRoles={["admin", "superadmin"]}>
-                  <Blank />
+                  <TenantProfile />
                 </ProtectedRoute>
               }
             />

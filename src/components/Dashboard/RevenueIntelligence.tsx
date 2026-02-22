@@ -159,9 +159,6 @@ const RevenueIntelligence: React.FC<RevenueIntelligenceProps> = ({ data, insight
                             <p className="text-sm font-bold text-indigo-100 opacity-80 uppercase tracking-widest">Efficiency metrics within target range.</p>
                         )}
                     </div>
-                    <button className="w-full mt-8 py-4 bg-white text-indigo-600 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-50 transition-all shadow-xl">
-                        Optimize Strategy
-                    </button>
                 </div>
             </motion.div>
         </div>
