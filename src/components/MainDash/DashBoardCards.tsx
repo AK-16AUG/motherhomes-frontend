@@ -5,7 +5,7 @@ import {
   BoxIconLine,
   GroupIcon,
 } from "../../icons";
-import { User, Home, IndianRupee } from "lucide-react";
+import { Home, IndianRupee } from "lucide-react";
 import Badge from "../ui/badge/Badge";
 
 export default function CardMetrics({

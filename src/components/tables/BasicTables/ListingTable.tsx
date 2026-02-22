@@ -6,14 +6,16 @@ import {
   TableRow,
 } from "../../ui/table";
 import Badge from "../../ui/badge/Badge";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import instance from "../../../utils/Axios/Axios";
 import { Link, useNavigate } from "react-router-dom";
-import { Pencil, Trash2, Upload, Download, FileText } from "lucide-react";
+import { Pencil, Trash2, Upload, Download, FileText, ChevronUp, ChevronDown } from "lucide-react";
 import { toast } from "react-toastify";
 import * as XLSX from "xlsx";
 
 type LoadingState = "idle" | "loading" | "success" | "error";
+type SortKey = "property_name" | "availability" | "flat_no" | "createdAt" | null;
+type SortDirection = "asc" | "desc";
 
 interface Property {
   _id: string;
@@ -53,7 +55,64 @@ export default function ListingTable() {
   const [editingAvailabilityId, setEditingAvailabilityId] = useState<string | null>(null);
   const [availabilityEditValue, setAvailabilityEditValue] = useState<boolean>(true);
   const [isUploading, setIsUploading] = useState(false);
+  const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection } | null>(null);
   const navigate = useNavigate();
+
+  const handleSort = (key: SortKey) => {
+    let direction: SortDirection = "asc";
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === "asc") {
+      direction = "desc";
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const sortedProperties = useMemo(() => {
+    let sortableItems = [...properties];
+    if (sortConfig !== null && sortConfig.key !== null) {
+      sortableItems.sort((a, b) => {
+        const key = sortConfig.key as keyof Property;
+
+        if (key === "createdAt") {
+          const dateA = new Date(a[key] as string).getTime();
+          const dateB = new Date(b[key] as string).getTime();
+          return sortConfig.direction === "asc" ? dateA - dateB : dateB - dateA;
+        }
+
+        if (key === "availability") {
+          return sortConfig.direction === "asc"
+            ? (a.availability === b.availability ? 0 : a.availability ? -1 : 1)
+            : (a.availability === b.availability ? 0 : a.availability ? 1 : -1);
+        }
+
+        if (key === "flat_no") {
+          const aVal = a.flat_no || "";
+          const bVal = b.flat_no || "";
+          return sortConfig.direction === "asc"
+            ? aVal.localeCompare(bVal, undefined, { numeric: true, sensitivity: 'base' })
+            : bVal.localeCompare(aVal, undefined, { numeric: true, sensitivity: 'base' });
+        }
+
+        const valA = String(a[key] || "").toLowerCase();
+        const valB = String(b[key] || "").toLowerCase();
+
+        if (valA < valB) return sortConfig.direction === "asc" ? -1 : 1;
+        if (valA > valB) return sortConfig.direction === "asc" ? 1 : -1;
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [properties, sortConfig]);
+
+  const renderSortIcon = (key: SortKey) => {
+    if (!sortConfig || sortConfig.key !== key) {
+      return <ChevronDown className="w-4 h-4 text-gray-400 opacity-50" />;
+    }
+    return sortConfig.direction === "asc" ? (
+      <ChevronUp className="w-4 h-4 text-blue-600" />
+    ) : (
+      <ChevronDown className="w-4 h-4 text-blue-600" />
+    );
+  };
 
   const fetchProperties = async () => {
     try {
@@ -428,7 +487,13 @@ export default function ListingTable() {
                   isHeader
                   className="text-left px-5 py-3 text-gray-900 font-medium"
                 >
-                  Property
+                  <div
+                    className="flex items-center gap-1 cursor-pointer hover:bg-gray-50 select-none group w-fit pr-2"
+                    onClick={() => handleSort("property_name")}
+                  >
+                    Property
+                    {renderSortIcon("property_name")}
+                  </div>
                 </TableCell>
                 <TableCell
                   isHeader
@@ -452,7 +517,13 @@ export default function ListingTable() {
                   isHeader
                   className="text-left px-5 py-3 text-gray-900 font-medium"
                 >
-                  Flat No
+                  <div
+                    className="flex items-center gap-1 cursor-pointer hover:bg-gray-50 select-none group w-fit pr-2"
+                    onClick={() => handleSort("flat_no")}
+                  >
+                    Flat No
+                    {renderSortIcon("flat_no")}
+                  </div>
                 </TableCell>
                 <TableCell
                   isHeader
@@ -470,13 +541,25 @@ export default function ListingTable() {
                   isHeader
                   className="text-left px-5 py-3 text-gray-900 font-medium"
                 >
-                  Availability
+                  <div
+                    className="flex items-center gap-1 cursor-pointer hover:bg-gray-50 select-none group w-fit pr-2"
+                    onClick={() => handleSort("availability")}
+                  >
+                    Availability
+                    {renderSortIcon("availability")}
+                  </div>
                 </TableCell>
                 <TableCell
                   isHeader
                   className="text-left px-5 py-3 text-gray-900 font-medium"
                 >
-                  Added On
+                  <div
+                    className="flex items-center gap-1 cursor-pointer hover:bg-gray-50 select-none group w-fit pr-2"
+                    onClick={() => handleSort("createdAt")}
+                  >
+                    Added On
+                    {renderSortIcon("createdAt")}
+                  </div>
                 </TableCell>
                 <TableCell
                   isHeader
@@ -488,8 +571,8 @@ export default function ListingTable() {
             </TableHeader>
 
             <TableBody>
-              {Array.isArray(properties) ? (
-                properties.map((property) => (
+              {Array.isArray(sortedProperties) ? (
+                sortedProperties.map((property) => (
                   <TableRow
                     key={property._id}
                     className="hover:bg-gray-50"
