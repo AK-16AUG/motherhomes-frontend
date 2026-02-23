@@ -1,14 +1,14 @@
-import { useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import instance from "../../utils/Axios/Axios";
 
 // Dashboard Cards and Charts
 import CardMetrics from "../../components/MainDash/DashBoardCards";
-import MonthlySalesChart from "../../components/MainDash/MonthlySalesChart";
-import MonthlyTarget from "../../components/MainDash/MonthlyTarget";
-import RecentAppointment from "../../components/MainDash/RecentAppointment";
 import PageMeta from "../../components/common/PageMeta";
-import RecentFlats from "../../components/MainDash/RecentFlats";
-import UpcomingMeetings from "../../components/MainDash/UpcomingMeetings";
+const MonthlySalesChart = lazy(() => import("../../components/MainDash/MonthlySalesChart"));
+const MonthlyTarget = lazy(() => import("../../components/MainDash/MonthlyTarget"));
+const RecentAppointment = lazy(() => import("../../components/MainDash/RecentAppointment"));
+const RecentFlats = lazy(() => import("../../components/MainDash/RecentFlats"));
+const UpcomingMeetings = lazy(() => import("../../components/MainDash/UpcomingMeetings"));
 
 // Define interface to match API response
 interface AppointmentData {
@@ -21,64 +21,71 @@ interface AppointmentData {
 
 export default function Home() {
   // State to hold API data
-  const [propertyData, setPropertyData] = useState([]);
-  const [leadsData, setLeadsData] = useState([]);
+  const [propertyData, setPropertyData] = useState<any[]>([]);
+  const [leadsData, setLeadsData] = useState<any[]>([]);
   const [appointmentData, setAppointmentData] = useState<AppointmentData>({});
   const [dashboardStats, setDashboardStats] = useState<any>({});
-  const [recentFlats, setRecentFlats] = useState([]);
+  const [recentFlats, setRecentFlats] = useState<any[]>([]);
 
   useEffect(() => {
-    // Fetch properties
-    async function fetchProperties() {
-      try {
-        const response = await instance.get("/property");
-        setPropertyData(response.data.results);
-      } catch (error) {
-        console.error("Property API error:", error);
-        setPropertyData([]);
-      }
-    }
+    let mounted = true;
+    const fetchDashboardData = async () => {
+      const [statsRes, leadsRes, appointmentsRes, propertiesRes] = await Promise.allSettled([
+        instance.get("/dashboard/comprehensive"),
+        // Fetch minimal leads payload; card only needs count
+        instance.get("/leads?page=1&limit=1"),
+        // Keep a small list for upcoming meetings and recent appointments
+        instance.get("/appointments?page=1&limit=8"),
+        // Keep chart payload bounded for faster dashboard load
+        instance.get("/property?page=1&limit=200"),
+      ]);
 
-    // Fetch leads
-    async function fetchLeads() {
-      try {
-        const response = await instance.get("/leads");
-        setLeadsData(response?.data?.results);
-      } catch (error) {
-        console.error("Leads API error:", error);
+      if (!mounted) return;
+
+      if (statsRes.status === "fulfilled") {
+        setDashboardStats(statsRes.value.data || {});
+        setRecentFlats(statsRes.value.data?.recentFlats || []);
+      } else {
+        setDashboardStats({});
+        setRecentFlats([]);
+      }
+
+      if (leadsRes.status === "fulfilled") {
+        setLeadsData(leadsRes.value?.data?.results || []);
+      } else {
         setLeadsData([]);
       }
-    }
 
-    // Fetch appointments
-    async function fetchAppointments() {
-      try {
-        const response = await instance.get("/appointments");
-        setAppointmentData(response.data);
-      } catch (error) {
-        console.error("Appointments API error:", error);
+      if (appointmentsRes.status === "fulfilled") {
+        setAppointmentData(appointmentsRes.value?.data || {});
+      } else {
         setAppointmentData({});
       }
-    }
 
-    // Fetch comprehensive stats
-    async function fetchStats() {
-      try {
-        const response = await instance.get("/dashboard/comprehensive");
-        setDashboardStats(response.data);
-        if (response.data.recentFlats) {
-          setRecentFlats(response.data.recentFlats);
-        }
-      } catch (error) {
-        console.error("Dashboard Stats API error:", error);
+      if (propertiesRes.status === "fulfilled") {
+        const propResults = propertiesRes.value?.data?.results || [];
+        setPropertyData(Array.isArray(propResults) ? propResults : []);
+      } else {
+        setPropertyData([]);
       }
-    }
 
-    fetchProperties();
-    fetchLeads();
-    fetchAppointments();
-    fetchStats();
+    };
+
+    fetchDashboardData();
+    return () => {
+      mounted = false;
+    };
   }, []);
+
+  const sectionLoader = useMemo(
+    () => (
+      <div className="rounded-2xl border border-gray-200 bg-white p-5">
+        <div className="h-6 w-40 animate-pulse rounded bg-gray-100" />
+        <div className="mt-4 h-40 animate-pulse rounded bg-gray-100" />
+      </div>
+    ),
+    []
+  );
 
   return (
     <>
@@ -96,27 +103,36 @@ export default function Home() {
         </div>
 
         <div className="col-span-12 xl:col-span-7">
-          <MonthlySalesChart propertyData={propertyData} />
+          <Suspense fallback={sectionLoader}>
+            <MonthlySalesChart propertyData={propertyData} />
+          </Suspense>
         </div>
 
         <div className="col-span-12 xl:col-span-5">
-          <MonthlyTarget propertyData={propertyData} />
+          <Suspense fallback={sectionLoader}>
+            <MonthlyTarget propertyData={propertyData} />
+          </Suspense>
         </div>
 
         {/* Second Row of Data */}
         <div className="col-span-12 xl:col-span-7">
-          <RecentAppointment />
+          <Suspense fallback={sectionLoader}>
+            <RecentAppointment appointmentsData={appointmentData} />
+          </Suspense>
         </div>
 
         <div className="col-span-12 xl:col-span-5 space-y-6">
-          <UpcomingMeetings appointmentsData={appointmentData} />
+          <Suspense fallback={sectionLoader}>
+            <UpcomingMeetings appointmentsData={appointmentData} />
+          </Suspense>
         </div>
 
         {/* Third Row of Data */}
         <div className="col-span-12 xl:col-span-12 mb-3 sm:mb-6">
-          <RecentFlats flats={recentFlats} />
+          <Suspense fallback={sectionLoader}>
+            <RecentFlats flats={recentFlats} />
+          </Suspense>
         </div>
-
       </div>
     </>
   );

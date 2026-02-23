@@ -1,7 +1,7 @@
 
 import Chart from "react-apexcharts";
 import { ApexOptions } from "apexcharts";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
 import { MoreDotIcon } from "../../icons";
@@ -26,45 +26,31 @@ export default function MonthlyTarget({
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
   const [newTargetValue, setNewTargetValue] = useState<number>(target);
 
-  // For today's revenue only (from propertyData)
   const today = new Date();
-  let todayRevenue = 0;
-  (propertyData || []).forEach((property) => {
-    if (
-      property.availability === false &&
-      property.category === "rent" &&
-      property.createdAt
-    ) {
-      const dt = new Date(property.createdAt);
-      const rate = Number(property.rate) || 0;
-      if (
-        dt.getDate() === today.getDate() &&
-        dt.getMonth() === today.getMonth() &&
-        dt.getFullYear() === today.getFullYear()
-      ) {
-        todayRevenue += rate;
-      }
-    }
-  });
-
-  // Calculate sales count for this month
-  const month = today.getMonth();
   const year = today.getFullYear();
-  let salesCount = 0;
-  (propertyData || []).forEach((property) => {
-    if (
-      property.availability === false &&
-      property.category === "sale" &&
-      property.createdAt
-    ) {
-      const dt = new Date(property.createdAt);
-      if (dt.getFullYear() === year && dt.getMonth() === month) {
-        salesCount += 1;
+  const monthName = today.toLocaleString("default", { month: "long" });
+
+  const todayRevenue = useMemo(() => {
+    let value = 0;
+    (propertyData || []).forEach((property) => {
+      if (
+        property.availability === false &&
+        property.category === "rent" &&
+        property.createdAt
+      ) {
+        const dt = new Date(property.createdAt);
+        const rate = Number(property.rate) || 0;
+        if (
+          dt.getDate() === today.getDate() &&
+          dt.getMonth() === today.getMonth() &&
+          dt.getFullYear() === today.getFullYear()
+        ) {
+          value += rate;
+        }
       }
-    }
-  });
-  // Get month name
-  const monthName = today.toLocaleString('default', { month: 'long' });
+    });
+    return value;
+  }, [propertyData, today.getDate(), today.getMonth(), today.getFullYear()]);
 
   // Fetch target and current revenue from API
   useEffect(() => {
@@ -228,10 +214,6 @@ export default function MonthlyTarget({
             <div className="text-gray-500 text-sm">This Month's Revenue</div>
             <div className="text-xl font-bold text-indigo-700">₹{currentRevenue.toLocaleString()}</div>
           </div>
-          {/* <div className="flex-1 min-w-[150px] text-center">
-            <div className="text-gray-500 text-sm">Sales ({monthName})</div>
-            <div className="text-xl font-bold text-pink-700">{salesCount}</div>
-          </div> */}
           <div className="flex-1 min-w-[150px] text-center">
             <div className="text-gray-500 text-sm">Today's Revenue</div>
             <div className="text-xl font-bold text-green-700">₹{todayRevenue.toLocaleString()}</div>

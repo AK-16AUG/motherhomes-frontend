@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Badge from "../ui/badge/Badge";
 import instance from "../../utils/Axios/Axios";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "../ui/table";
@@ -26,20 +26,40 @@ interface Appointment {
   createdAt: string;
 }
 
-export default function RecentAppointment() {
+interface RecentAppointmentProps {
+  appointmentsData?: any;
+}
+
+export default function RecentAppointment({ appointmentsData }: RecentAppointmentProps) {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (appointmentsData) {
+      let appointmentData: any[] = [];
+      if (appointmentsData?.appointments?.data && Array.isArray(appointmentsData.appointments.data)) {
+        appointmentData = appointmentsData.appointments.data;
+      } else if (appointmentsData?.appointments && Array.isArray(appointmentsData.appointments)) {
+        appointmentData = appointmentsData.appointments;
+      } else if (Array.isArray(appointmentsData)) {
+        appointmentData = appointmentsData;
+      } else if (appointmentsData?.data && Array.isArray(appointmentsData.data)) {
+        appointmentData = appointmentsData.data;
+      }
+      setAppointments(appointmentData.slice(0, 8));
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
     const fetchAppointments = async () => {
       try {
         setLoading(true);
         setError(null);
-        const response = await instance.get("/appointments");
+        const response = await instance.get("/appointments?page=1&limit=8");
 
         const data = response.data;
-        console.log("API Response for Recent Appointments:", data);
 
         // Handle different possible response structures
         let appointmentData = [];
@@ -69,7 +89,9 @@ export default function RecentAppointment() {
     };
 
     fetchAppointments();
-  }, []);
+  }, [appointmentsData]);
+
+  const displayAppointments = useMemo(() => appointments.slice(0, 8), [appointments]);
 
   if (loading) {
     return (
@@ -124,8 +146,8 @@ export default function RecentAppointment() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {appointments.length > 0 ? (
-              appointments.map((appointment) => (
+            {displayAppointments.length > 0 ? (
+              displayAppointments.map((appointment) => (
                 <TableRow key={appointment._id}>
                   <TableCell className="py-3">
                     <div className="flex items-center gap-3">

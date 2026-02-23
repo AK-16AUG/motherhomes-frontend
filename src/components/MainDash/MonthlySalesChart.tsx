@@ -1,5 +1,6 @@
 import Chart from "react-apexcharts";
 import { ApexOptions } from "apexcharts";
+import { useMemo } from "react";
 
 const monthLabels = [
   "Jan",
@@ -28,28 +29,30 @@ export default function MonthlySalesChart({
 }: {
   propertyData: Property[];
 }) {
-  const saleData = new Array(12).fill(0);
-  const rentData = new Array(12).fill(0);
+  const series = useMemo(() => {
+    const saleData = new Array(12).fill(0);
+    const rentData = new Array(12).fill(0);
 
-  (propertyData || []).forEach((property) => {
-    if (property.availability === false || property.category === "sale") {
-      const rate = Number(property.rate) || 0;
-      const monthIdx = property.createdAt
-        ? new Date(property.createdAt).getMonth()
-        : 0;
+    (propertyData || []).forEach((property) => {
+      if (property.availability === false || property.category === "sale") {
+        const rate = Number(property.rate) || 0;
+        const monthIdx = property.createdAt
+          ? new Date(property.createdAt).getMonth()
+          : 0;
 
-      if (property.category === "rent") {
-        rentData[monthIdx] += rate;
-      } else if (property.category === "sale") {
-        saleData[monthIdx] += rate;
+        if (property.category === "rent") {
+          rentData[monthIdx] += rate;
+        } else if (property.category === "sale") {
+          saleData[monthIdx] += rate;
+        }
       }
-    }
-  });
+    });
 
-  const series = [
-    { name: "Rent", data: rentData },
-    { name: "Sale", data: saleData },
-  ];
+    return [
+      { name: "Rent", data: rentData },
+      { name: "Sale", data: saleData },
+    ];
+  }, [propertyData]);
 
   const options: ApexOptions = {
     colors: ["#465fff", "#9d57f6"],
