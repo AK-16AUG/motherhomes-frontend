@@ -9,6 +9,7 @@ import home from "../assets/home-icon.png";
 const AppHeader: React.FC = () => {
   const navigate = useNavigate();
   const [isApplicationMenuOpen, setApplicationMenuOpen] = useState(false);
+  const role = localStorage.getItem("role");
 
   const { isMobileOpen, toggleSidebar, toggleMobileSidebar } = useSidebar();
 
@@ -129,12 +130,46 @@ const AppHeader: React.FC = () => {
         <div
           className={`${
             isApplicationMenuOpen ? "flex" : "hidden"
-          } items-center justify-center w-full gap-4 px-4 py-4 bg-gray-50 lg:hidden`}
+          } flex-col items-stretch w-full gap-4 px-4 py-4 bg-gray-50 lg:hidden`}
         >
-          <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center gap-3">
             <NotificationDropdown />
             <UserDropdown />
           </div>
+          {(role === "admin" || role === "superadmin") && (
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  navigate("/dashboard");
+                  setApplicationMenuOpen(false);
+                }}
+                className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700"
+              >
+                Dashboard
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  navigate("/leads");
+                  setApplicationMenuOpen(false);
+                }}
+                className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700"
+              >
+                Leads
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  navigate("/editappointments");
+                  setApplicationMenuOpen(false);
+                }}
+                className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700"
+              >
+                Appointments
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </header>

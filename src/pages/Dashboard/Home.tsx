@@ -86,7 +86,7 @@ export default function Home() {
         title="MotherHome"
         description="Mother Home PG and Rental place"
       />
-      <div className="grid grid-cols-12 gap-4 md:gap-6">
+      <div className="grid grid-cols-12 gap-3 sm:gap-4 md:gap-6">
         <div className="col-span-12 space-y-6">
           <CardMetrics
             leadsData={leadsData}
@@ -113,7 +113,7 @@ export default function Home() {
         </div>
 
         {/* Third Row of Data */}
-        <div className="col-span-12 xl:col-span-12 mb-6">
+        <div className="col-span-12 xl:col-span-12 mb-3 sm:mb-6">
           <RecentFlats flats={recentFlats} />
         </div>
 

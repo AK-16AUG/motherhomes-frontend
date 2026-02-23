@@ -6,9 +6,11 @@ import {
   Calendar,
   Building,
   Users,
-  MoreHorizontal
+  MoreHorizontal,
+  X
 } from "lucide-react";
 import home from "../assets/home-icon.png";
+import { useSidebar } from "../context/SidebarContext";
 
 interface NavItem {
   icon: React.ReactNode;
@@ -23,6 +25,13 @@ const AppSidebar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const role = localStorage.getItem("role");
+  const {
+    isExpanded,
+    isHovered,
+    setIsHovered,
+    isMobileOpen,
+    closeMobileSidebar,
+  } = useSidebar();
 
   // Authentication check
   useEffect(() => {
@@ -39,10 +48,6 @@ const AppSidebar: React.FC = () => {
   } | null>(null);
   const [subMenuHeight, setSubMenuHeight] = useState<Record<string, number>>({});
   const subMenuRefs = useRef<Record<string, HTMLDivElement | null>>({});
-
-  const [isExpanded] = useState(true);
-  const [isHovered, setIsHovered] = useState(false);
-  const [isMobileOpen] = useState(false);
 
   const navItems: NavItem[] = role === "admin" || role === "superadmin"
     ? [
@@ -153,6 +158,13 @@ const AppSidebar: React.FC = () => {
     }
   }, [openSubmenu]);
 
+  useEffect(() => {
+    // Auto-close drawer after navigation on mobile
+    if (isMobileOpen) {
+      closeMobileSidebar();
+    }
+  }, [location.pathname]);
+
   const handleSubmenuToggle = (index: number) => {
     setOpenSubmenu((prevOpenSubmenu) => {
       if (prevOpenSubmenu && prevOpenSubmenu.index === index) {
@@ -201,6 +213,9 @@ const AppSidebar: React.FC = () => {
             nav.path && (
               <Link
                 to={nav.path}
+                onClick={() => {
+                  if (isMobileOpen) closeMobileSidebar();
+                }}
                 className={`menu-item group ${isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"
                   }`}
               >
@@ -236,6 +251,9 @@ const AppSidebar: React.FC = () => {
                   <li key={subItem.name}>
                     <Link
                       to={subItem.path}
+                      onClick={() => {
+                        if (isMobileOpen) closeMobileSidebar();
+                      }}
                       className={`menu-dropdown-item ${isActive(subItem.path)
                         ? "menu-dropdown-item-active"
                         : "menu-dropdown-item-inactive"
@@ -257,7 +275,7 @@ const AppSidebar: React.FC = () => {
     <aside
       className={`fixed flex flex-col top-0 px-5 left-0 bg-white dark:bg-gray-900 dark:border-gray-800 text-gray-900 h-screen transition-all duration-300 ease-in-out z-50 border-r border-gray-200 
         ${isExpanded || isMobileOpen
-          ? "w-[250px]"
+          ? "w-[82vw] max-w-[300px] lg:w-[250px] lg:max-w-none"
           : isHovered
             ? "w-[250px]"
             : "w-[90px]"
@@ -271,6 +289,14 @@ const AppSidebar: React.FC = () => {
         className={`py-6 flex ${!isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
           }`}
       >
+        <button
+          type="button"
+          onClick={closeMobileSidebar}
+          className="lg:hidden absolute right-4 top-5 inline-flex items-center justify-center w-9 h-9 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100"
+          aria-label="Close sidebar"
+        >
+          <X className="w-4 h-4" />
+        </button>
         <Link to="/" className="hidden lg:block text-xl font-bold">
           <div className="flex gap-2 justify-center items-center dark:text-white">
             <img src={home} alt="logo" className="w-6 h-6" />
