@@ -772,6 +772,117 @@ const SingleListing: React.FC = () => {
     setIsLoggedIn(!!localStorage.getItem("token"));
   }, []);
 
+  const renderScheduleVisitContent = () => (
+    <>
+      <h3 className="text-xl font-semibold text-center mb-6">
+        Schedule a Visit
+      </h3>
+
+      {check && scheduledDate && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+          <div className="flex items-center text-green-800">
+            <Calendar className="w-5 h-5 mr-2" />
+            <div>
+              <p className="font-medium">Visit Scheduled!</p>
+              <p className="text-sm">
+                Your site visit is scheduled for{" "}
+                {new Date(scheduledDate).toLocaleDateString()}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => navigate("/appointments")}
+            className="mt-3 text-sm text-green-700 hover:underline"
+          >
+            View all appointments →
+          </button>
+        </div>
+      )}
+
+      {!check && (
+        <form onSubmit={handleScheduleVisit} className="space-y-4">
+          <div>
+            <label
+              htmlFor="schedule_Time"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
+              <Calendar className="w-4 h-4 inline mr-1" />
+              Preferred Visit Date
+            </label>
+
+            <CustomCalendar
+              selectedDate={formData.schedule_Time}
+              onDateSelect={handleDateSelect}
+              minDate={new Date()}
+              disabled={!isLoggedIn}
+            />
+
+            <p className="text-xs text-gray-500 mt-1">
+              Select your preferred date for property visit
+            </p>
+          </div>
+
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <p className="text-xs text-blue-800">
+              📋 We accept bookings with a minimum stay of 3 months.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            {!isLoggedIn && (
+              <div className="space-y-3">
+                <div className="text-center p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                  <p className="text-sm text-orange-800 font-medium mb-3">
+                    Please login or sign up to book an appointment
+                  </p>
+                  <div className="flex space-x-2">
+                    <button
+                      type="button"
+                      onClick={handleLoginRedirect}
+                      className="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white font-medium py-2 px-4 rounded-lg transition"
+                    >
+                      Login
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSignupRedirect}
+                      className="flex-1 border border-yellow-600 text-yellow-600 hover:bg-yellow-50 font-medium py-2 px-4 rounded-lg transition"
+                    >
+                      Sign Up
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {isLoggedIn && (
+              <LoadingButton
+                type="submit"
+                loading={loading}
+                loadingText="Scheduling..."
+                variant="primary"
+                size="lg"
+                className="w-full"
+              >
+                Schedule Visit
+              </LoadingButton>
+            )}
+          </div>
+        </form>
+      )}
+
+      <div className="mt-6 pt-4 border-t border-gray-100">
+        <div className="text-center text-sm text-gray-600">
+          <p className="mb-2">Need help? Contact us</p>
+          <div className="flex justify-center space-x-4">
+            <span>📞 +91-6202653172</span>
+            <span>✉️ info@motherhomes.com</span>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+
   // Update handleScheduleVisit function - fix the redirect issue
   const handleScheduleVisit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -1095,6 +1206,9 @@ const SingleListing: React.FC = () => {
                     </div>
                   </div>
                 </div>
+                <div className="bg-white rounded-xl p-6 shadow-sm lg:hidden">
+                  {renderScheduleVisitContent()}
+                </div>
               </div>
 
               {/* Amenities Section */}
@@ -1246,119 +1360,10 @@ const SingleListing: React.FC = () => {
             </div>
 
             {/* Right Column - Updated Booking Form */}
-            <div className="lg:col-span-1">
+            <div className="hidden lg:block lg:col-span-1">
               <div className="sticky top-6">
                 <div className="bg-white rounded-xl p-6 shadow-sm">
-                  <h3 className="text-xl font-semibold text-center mb-6">
-                    Schedule a Visit
-                  </h3>
-
-                  {/* Show scheduled date message if visit is already scheduled */}
-                  {check && scheduledDate && (
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
-                      <div className="flex items-center text-green-800">
-                        <Calendar className="w-5 h-5 mr-2" />
-                        <div>
-                          <p className="font-medium">Visit Scheduled!</p>
-                          <p className="text-sm">
-                            Your site visit is scheduled for{" "}
-                            {new Date(scheduledDate).toLocaleDateString()}
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => navigate("/appointments")}
-                        className="mt-3 text-sm text-green-700 hover:underline"
-                      >
-                        View all appointments →
-                      </button>
-                    </div>
-                  )}
-
-                  {!check && (
-                    <form onSubmit={handleScheduleVisit} className="space-y-4">
-                      {/* Enhanced Date Picker Field with Custom Calendar */}
-                      <div>
-                        <label
-                          htmlFor="schedule_Time"
-                          className="block text-sm font-medium text-gray-700 mb-2"
-                        >
-                          <Calendar className="w-4 h-4 inline mr-1" />
-                          Preferred Visit Date
-                        </label>
-
-                        <CustomCalendar
-                          selectedDate={formData.schedule_Time}
-                          onDateSelect={handleDateSelect}
-                          minDate={new Date()}
-                          disabled={!isLoggedIn}
-                        />
-
-                        <p className="text-xs text-gray-500 mt-1">
-                          Select your preferred date for property visit
-                        </p>
-                      </div>
-
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                        <p className="text-xs text-blue-800">
-                          📋 We accept bookings with a minimum stay of 3 months.
-                        </p>
-                      </div>
-
-                      {/* Submit button and auth options */}
-                      <div className="space-y-3">
-                        {!isLoggedIn && (
-                          <div className="space-y-3">
-                            <div className="text-center p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                              <p className="text-sm text-orange-800 font-medium mb-3">
-                                Please login or sign up to book an appointment
-                              </p>
-                              <div className="flex space-x-2">
-                                <button
-                                  type="button"
-                                  onClick={handleLoginRedirect}
-                                  className="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white font-medium py-2 px-4 rounded-lg transition"
-                                >
-                                  Login
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={handleSignupRedirect}
-                                  className="flex-1 border border-yellow-600 text-yellow-600 hover:bg-yellow-50 font-medium py-2 px-4 rounded-lg transition"
-                                >
-                                  Sign Up
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {isLoggedIn && (
-                          <LoadingButton
-                            type="submit"
-                            loading={loading}
-                            loadingText="Scheduling..."
-                            variant="primary"
-                            size="lg"
-                            className="w-full"
-                          >
-                            Schedule Visit
-                          </LoadingButton>
-                        )}
-                      </div>
-                    </form>
-                  )}
-
-                  {/* Additional Info */}
-                  <div className="mt-6 pt-4 border-t border-gray-100">
-                    <div className="text-center text-sm text-gray-600">
-                      <p className="mb-2">Need help? Contact us</p>
-                      <div className="flex justify-center space-x-4">
-                        <span>📞 +91-6202653172</span>
-                        <span>✉️ info@motherhomes.com</span>
-                      </div>
-                    </div>
-                  </div>
+                  {renderScheduleVisitContent()}
                 </div>
               </div>
             </div>
