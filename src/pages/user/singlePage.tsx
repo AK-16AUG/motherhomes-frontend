@@ -843,9 +843,13 @@ const SingleListing: React.FC = () => {
         };
 
         if (errorResponse.response?.status === 401) {
-          errorMessage = "Session expired or invalid token. Redirecting to login...";
+          errorMessage = "Session expired. Please login again to book appointment.";
           toast.error(errorMessage);
-          setTimeout(() => navigate("/signin"), 2000);
+          localStorage.removeItem("token");
+          localStorage.removeItem("role");
+          localStorage.removeItem("userid");
+          localStorage.removeItem("userName");
+          setIsLoggedIn(false);
           return;
         }
 

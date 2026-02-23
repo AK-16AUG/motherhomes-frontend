@@ -11,14 +11,15 @@ const instance = axios.create({
 
 instance.interceptors.request.use(
   (config: any) => {
-    let token = localStorage.getItem("token");
+    let token = localStorage.getItem("token") || "";
 
-    // Sanitize token: remove any surrounding quotes that might have been added
-    if (token && (token.startsWith('"') && token.endsWith('"'))) {
-      token = token.slice(1, -1);
+    // Normalize token to avoid accidental malformed Authorization headers.
+    token = token.trim().replace(/^"+|"+$/g, "");
+    if (token.toLowerCase().startsWith("bearer ")) {
+      token = token.slice(7).trim();
     }
 
-    if (token && config.headers) {
+    if (token && token !== "null" && token !== "undefined" && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
