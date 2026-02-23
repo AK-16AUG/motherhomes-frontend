@@ -70,7 +70,7 @@ const AppSidebar: React.FC = () => {
       {
         icon: <Users className="w-5 h-5" />,
         name: "Tenants",
-        path: "/alllisting",
+        path: "/tenantinfo",
         pro: false,
       },
       {

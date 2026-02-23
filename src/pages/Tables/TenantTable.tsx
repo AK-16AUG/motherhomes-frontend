@@ -8,6 +8,7 @@ import {
   X,
   Eye,
   Trash,
+  Pencil,
   Download,
   Upload,
   FileText,
@@ -91,6 +92,8 @@ export default function DataTable() {
   const [currentPage, setCurrentPage] = useState(1);
   const [entriesPerPage, setEntriesPerPage] = useState(10);
   const [showModal, setShowModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [currentTenant, setCurrentTenant] = useState<Tenant | null>(null);
   const [formData, setFormData] = useState<TenantFormData>({
     name: "",
     tenantDetails: [],
@@ -107,6 +110,14 @@ export default function DataTable() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editFormData, setEditFormData] = useState({
+    name: "",
+    flatNo: "",
+    society: "",
+    members: 1,
+    startDate: "",
+    rent: "",
+  });
   const navigate = useNavigate(); // Initialize useNavigate
   const bulkUploadRef = useRef<HTMLInputElement>(null);
 
@@ -281,6 +292,71 @@ export default function DataTable() {
   };
   // --------------------------------
 
+  const openEditModal = (tenant: Tenant) => {
+    setCurrentTenant(tenant);
+    setEditFormData({
+      name: tenant.name || "",
+      flatNo: tenant.flatNo || "",
+      society: tenant.society || "",
+      members: Number(tenant.members) || 1,
+      startDate: tenant.startDate
+        ? new Date(tenant.startDate).toISOString().split("T")[0]
+        : "",
+      rent: tenant.rent || "",
+    });
+    setShowEditModal(true);
+  };
+
+  const handleEditInputChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const { name, value } = e.target;
+    setEditFormData((prev) => ({
+      ...prev,
+      [name]: name === "members" ? Number(value) || 1 : value,
+    }));
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentTenant) return;
+
+    try {
+      const payload: any = {
+        flatNo: editFormData.flatNo,
+        society: editFormData.society,
+        members: String(editFormData.members),
+        startDate: editFormData.startDate,
+        rent: editFormData.rent,
+      };
+
+      if (currentTenant.property_type === "Normal") {
+        payload.name = editFormData.name;
+      }
+
+      const response = await instance.put(
+        `${API_BASE_URL}/${currentTenant._id}`,
+        payload
+      );
+      const updatedTenant = response?.data?.data;
+
+      if (updatedTenant) {
+        setData((prev) =>
+          prev.map((item) =>
+            item._id === currentTenant._id ? updatedTenant : item
+          )
+        );
+      }
+
+      toast.success("Tenant updated successfully!");
+      setShowEditModal(false);
+      setCurrentTenant(null);
+    } catch (err: any) {
+      console.error("Error updating tenant:", err);
+      toast.error(err?.response?.data?.message || "Failed to update tenant.");
+    }
+  };
+
   const downloadExcel = () => {
     const exportData = data.map((t) => ({
       Tenant: t.property_type === "Normal" ? t.name : t.tenantDetails?.map(d => d.name).join(", ") || "",
@@ -299,7 +375,31 @@ export default function DataTable() {
   };
 
   const downloadSampleTemplate = () => {
-    const sampleData = [{ Tenant_Name: "John Doe", Property_Type: "Normal", Flat_No: "A-101", Society: "Green Valley", Members: 2, Start_Date: "2025-01-01", Rent: "15000" }];
+    const sampleData = [
+      {
+        Property_ID: "",
+        Property_Name: "Sunrise Residency",
+        Property_Type: "Normal",
+        Tenant_Name: "John Doe",
+        User_Emails: "john@example.com,john2@example.com",
+        Flat_No: "A-101",
+        Society: "Green Valley",
+        Members: 2,
+        Start_Date: "2025-01-01",
+        Rent: "15000",
+      },
+      {
+        Property_ID: "",
+        Property_Name: "City PG",
+        Property_Type: "Pg",
+        Tenant_Details: "Aman:aman@example.com,Riya:riya@example.com",
+        Flat_No: "PG-12",
+        Society: "City Center",
+        Members: 2,
+        Start_Date: "2025-01-01",
+        Rent: "9000",
+      },
+    ];
     const ws = XLSX.utils.json_to_sheet(sampleData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Tenants Template");
@@ -316,9 +416,101 @@ export default function DataTable() {
       const ws = wb.Sheets[wb.SheetNames[0]];
       const rows: any[] = XLSX.utils.sheet_to_json(ws);
       if (rows.length === 0) { toast.error("No data found in file"); return; }
-      toast.info(`Processing ${rows.length} tenants...`);
-      toast.warning("Bulk tenant creation requires property IDs. Please use the Add Tenant form for individual entries.");
-    } catch { toast.error("Failed to process bulk upload file."); }
+      const usersResponse = await instance.get("/user?page=1&limit=5000");
+      const existingUsers: any[] = usersResponse.data?.users || [];
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const row of rows) {
+        try {
+          const propertyIdFromSheet = String(row["Property_ID"] || "").trim();
+          const propertyNameFromSheet = String(row["Property_Name"] || "").trim().toLowerCase();
+          const matchedProperty =
+            propertyIdFromSheet
+              ? properties.find((p) => p._id === propertyIdFromSheet)
+              : properties.find((p) => p.property_name.toLowerCase() === propertyNameFromSheet);
+
+          if (!matchedProperty?._id) {
+            errorCount++;
+            continue;
+          }
+
+          const propertyTypeRaw = String(row["Property_Type"] || "Normal").trim().toLowerCase();
+          const property_type: "Pg" | "Normal" = propertyTypeRaw === "pg" ? "Pg" : "Normal";
+
+          const payload: any = {
+            property_id: matchedProperty._id,
+            flatNo: String(row["Flat_No"] || row["FlatNo"] || "").trim(),
+            society: String(row["Society"] || "").trim(),
+            members: String(Number(row["Members"]) || 1),
+            startDate: row["Start_Date"] || row["StartDate"] || new Date().toISOString(),
+            rent: String(row["Rent"] || "").trim(),
+            property_type,
+          };
+
+          if (property_type === "Normal") {
+            const users = String(row["User_Emails"] || "")
+              .split(",")
+              .map((email) => email.trim())
+              .filter(Boolean);
+            payload.name = String(row["Tenant_Name"] || "").trim();
+            payload.users = users;
+            if (!payload.name || users.length === 0) {
+              errorCount++;
+              continue;
+            }
+
+            for (const email of users) {
+              const exists = existingUsers.some(
+                (u) => String(u.email || "").toLowerCase() === email.toLowerCase()
+              );
+              if (!exists) {
+                await instance.post("/user", {
+                  User_Name: email.split("@")[0] || "Tenant User",
+                  email,
+                  phone_no: 0,
+                  password: "User@123",
+                  role: "user",
+                  isVerified: true,
+                });
+                existingUsers.push({ email });
+              }
+            }
+          } else {
+            const detailsRaw = String(row["Tenant_Details"] || "").trim();
+            const tenantDetails = detailsRaw
+              .split(",")
+              .map((item) => item.trim())
+              .filter(Boolean)
+              .map((item) => {
+                const [name, email] = item.split(":").map((v) => v.trim());
+                return { name, email };
+              })
+              .filter((item) => item.name && item.email);
+
+            if (!tenantDetails.length) {
+              errorCount++;
+              continue;
+            }
+            payload.tenantDetails = tenantDetails;
+          }
+
+          await instance.post(API_BASE_URL, payload);
+          successCount++;
+        } catch {
+          errorCount++;
+        }
+      }
+
+      toast.success(
+        `Bulk upload: ${successCount} tenants added${errorCount > 0 ? `, ${errorCount} failed` : ""}.`
+      );
+
+      const tenantsResponse = await instance.get(API_BASE_URL);
+      setData(tenantsResponse.data?.data || []);
+    } catch {
+      toast.error("Failed to process bulk upload file.");
+    }
     if (bulkUploadRef.current) bulkUploadRef.current.value = "";
   };
 
@@ -676,6 +868,144 @@ export default function DataTable() {
           </div>
         )}
 
+        {/* Edit Tenant Modal */}
+        {showEditModal && currentTenant && (
+          <div className="fixed inset-0 bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center z-50 p-4 backdrop-blur-sm mt-16">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col border border-gray-200 dark:border-gray-700 animate-fadeIn">
+              <div className="flex justify-between items-center p-5 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">
+                <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100 flex items-center">
+                  <div className="bg-yellow-100 dark:bg-yellow-900 p-2 rounded-full mr-3">
+                    <Pencil
+                      size={18}
+                      className="text-yellow-700 dark:text-yellow-300"
+                    />
+                  </div>
+                  Edit Tenant
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setCurrentTenant(null);
+                  }}
+                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors rounded-full p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="overflow-y-auto flex-1 p-5">
+                <form onSubmit={handleEditSubmit} className="space-y-5">
+                  {currentTenant.property_type === "Normal" && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Tenant Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="name"
+                        value={editFormData.name}
+                        onChange={handleEditInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        required
+                      />
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Flat No. <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="flatNo"
+                        value={editFormData.flatNo}
+                        onChange={handleEditInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Society <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="society"
+                        value={editFormData.society}
+                        onChange={handleEditInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Members <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        name="members"
+                        value={editFormData.members}
+                        onChange={handleEditInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Start Date <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="date"
+                        name="startDate"
+                        value={editFormData.startDate}
+                        onChange={handleEditInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        required
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Rent <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="rent"
+                        value={editFormData.rent}
+                        onChange={handleEditInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        required
+                      />
+                    </div>
+                  </div>
+                </form>
+              </div>
+
+              <div className="flex justify-end gap-3 p-5 border-t border-gray-200 dark:border-gray-700 sticky bottom-0 bg-white dark:bg-gray-800">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setCurrentTenant(null);
+                  }}
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300 font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  onClick={handleEditSubmit}
+                  className="px-4 py-2 bg-yellow-600 dark:bg-yellow-700 text-white rounded-lg hover:bg-yellow-700 dark:hover:bg-yellow-600 transition-colors shadow-md font-medium flex items-center"
+                >
+                  <Pencil size={16} className="mr-1" />
+                  Update Tenant
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <label
@@ -769,6 +1099,14 @@ export default function DataTable() {
                       {tenant.rent}
                     </td>
                     <td className="py-2 px-4 flex gap-2 flex-wrap">
+                      <button
+                        onClick={() => openEditModal(tenant)}
+                        className="flex items-center gap-1 text-sm bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 px-2 py-1 rounded-lg hover:bg-yellow-200 dark:hover:bg-yellow-800 whitespace-nowrap"
+                        title="Edit Tenant"
+                      >
+                        <Pencil size={14} />
+                        <span className="hidden sm:inline">Edit</span>
+                      </button>
                       <Link
                         to={`/tenant/${tenant?._id}`}
                         className="flex items-center gap-1 text-sm bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-800 whitespace-nowrap"

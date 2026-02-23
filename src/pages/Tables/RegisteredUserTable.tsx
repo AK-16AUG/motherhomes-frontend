@@ -124,7 +124,7 @@ export default function RegisteredUserTable() {
   };
 
   const downloadSampleTemplate = () => {
-    const sampleData = [{ Name: "Jane Doe", Email: "jane@example.com", Phone: "9876543210" }];
+    const sampleData = [{ Name: "Jane Doe", Email: "jane@example.com", Phone: "9876543210", Password: "User@123" }];
     const ws = XLSX.utils.json_to_sheet(sampleData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Users Template");
@@ -141,9 +141,44 @@ export default function RegisteredUserTable() {
       const ws = wb.Sheets[wb.SheetNames[0]];
       const rows: any[] = XLSX.utils.sheet_to_json(ws);
       if (rows.length === 0) { toast.error("No data found in file"); return; }
-      toast.info(`Processing ${rows.length} users...`);
-      toast.warning("Bulk user creation requires email verification. Please use the registration flow for individual users.");
-    } catch { toast.error("Failed to process bulk upload file."); }
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const row of rows) {
+        try {
+          const email = String(row["Email"] || "").trim();
+          if (!email) {
+            errorCount++;
+            continue;
+          }
+
+          await instance.post("/user", {
+            User_Name: row["Name"] || "User",
+            email,
+            phone_no: String(row["Phone"] || "").trim(),
+            password: row["Password"] || "User@123",
+            role: "user",
+            isVerified: true,
+          });
+          successCount++;
+        } catch {
+          errorCount++;
+        }
+      }
+
+      toast.success(
+        `Bulk upload: ${successCount} users added${errorCount > 0 ? `, ${errorCount} failed` : ""}.`
+      );
+
+      setCurrentPage(1);
+      const response = await instance.get(`${API_BASE_URL}?page=1&limit=${entriesPerPage}`);
+      const userData = response.data;
+      setData(userData.users || []);
+      setTotalEntries(userData.total || 0);
+      setTotalPages(Math.ceil((userData.total || 0) / entriesPerPage) || 1);
+    } catch {
+      toast.error("Failed to process bulk upload file.");
+    }
     if (bulkUploadRef.current) bulkUploadRef.current.value = "";
   };
 

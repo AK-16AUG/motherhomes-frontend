@@ -39,11 +39,26 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
   const token = localStorage.getItem("token");
-  const userRole: string | null = localStorage.getItem("role");
+  const rawRole: string | null = localStorage.getItem("role");
+  const normalizedRole = (rawRole || "")
+    .replace(/^"+|"+$/g, "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "");
+  const normalizedAllowedRoles = allowedRoles.map((role) =>
+    role.toLowerCase().replace(/\s+/g, "")
+  );
 
   if (!token) return <Navigate to="/signin" replace />;
-  if (!userRole) return <Navigate to="/" replace />;
-  if (allowedRoles && !allowedRoles.includes(userRole))
+  if (!normalizedRole) return <Navigate to="/" replace />;
+  if (normalizedRole === "super_admin" || normalizedRole === "super-admin") {
+    return normalizedAllowedRoles.includes("superadmin") ? (
+      <>{children}</>
+    ) : (
+      <Navigate to="/" replace />
+    );
+  }
+  if (allowedRoles && !normalizedAllowedRoles.includes(normalizedRole))
     return <Navigate to="/" replace />;
 
   return children;
@@ -160,7 +175,7 @@ export default function App() {
             />
             <Route
               path="/tenants"
-              element={<Navigate to="/alllisting" replace />}
+              element={<Navigate to="/tenantinfo" replace />}
             />
             <Route
               path="/properties"

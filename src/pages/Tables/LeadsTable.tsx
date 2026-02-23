@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -11,6 +11,7 @@ import {
   CheckCircle,
   User,
   Edit,
+  Calendar,
   Download,
   Upload,
   FileText,
@@ -41,6 +42,24 @@ interface LeadFormData {
   priority?: "low" | "medium" | "high";
   matchedProperties: string[];
   location?: string;
+}
+
+interface AppointmentRecord {
+  _id: string;
+  status: "Pending" | "Confirmed" | "Cancelled" | "Completed" | "Convert to lead";
+  schedule_Time?: string;
+  createdAt?: string;
+  phone?: string;
+  user_id?: {
+    _id?: string;
+    email?: string;
+    phone_no?: string | number;
+    User_Name?: string;
+  };
+  property_id?: {
+    _id?: string;
+    property_name?: string;
+  };
 }
 
 const API_BASE_URL = "/leads";
@@ -76,6 +95,16 @@ export default function LeadsTable() {
   const [propertySearch, setPropertySearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [appointments, setAppointments] = useState<AppointmentRecord[]>([]);
+  const [showAppointmentModal, setShowAppointmentModal] = useState(false);
+  const [currentAppointment, setCurrentAppointment] = useState<AppointmentRecord | null>(null);
+  const [appointmentForm, setAppointmentForm] = useState<{
+    status: AppointmentRecord["status"];
+    schedule_Time: string;
+  }>({
+    status: "Pending",
+    schedule_Time: "",
+  });
 
   const navigate = useNavigate(); // Initialize useNavigate
   const clearAuthAndRedirectToSignin = () => {
@@ -92,11 +121,12 @@ export default function LeadsTable() {
         setLoading(true);
         setError(null); // Reset error
 
-        const [leadsResponse, propertiesResponse] = await Promise.all([
+        const [leadsResponse, propertiesResponse, appointmentsResponse] = await Promise.all([
           instance.get(
             `${API_BASE_URL}?page=${currentPage}&limit=${entriesPerPage}`
           ),
           instance.get(PROPERTY_API_URL),
+          instance.get("/appointments?page=1&limit=1000"),
         ]);
 
         console.log("Leads API Response:", leadsResponse.data);
@@ -114,6 +144,7 @@ export default function LeadsTable() {
 
         // Extract the results array from the properties response
         setProperties(propData.results || []);
+        setAppointments(appointmentsResponse.data?.appointments?.data || []);
         setLoading(false);
       } catch (err: any) {
         console.error("Error fetching leads/properties data:", err);
@@ -299,6 +330,98 @@ export default function LeadsTable() {
     } catch (err) {
       console.error("Error updating lead status:", err);
       toast.error("Failed to update lead status");
+    }
+  };
+
+  const normalizePhone = (value?: string | number) =>
+    String(value || "").replace(/\D/g, "").slice(-10);
+
+  const appointmentsByLeadId = useMemo(() => {
+    const map = new Map<string, AppointmentRecord[]>();
+
+    for (const lead of data) {
+      const leadEmail = String(lead.contactInfo?.email || "").toLowerCase().trim();
+      const leadPhone = normalizePhone(lead.contactInfo?.phone);
+      const leadPropertyIds = (lead.matchedProperties || []).map((p: any) =>
+        String(p?._id || p)
+      );
+
+      const matchedAppointments = appointments
+        .filter((appointment) => {
+          const apptEmail = String(appointment.user_id?.email || "").toLowerCase().trim();
+          const apptPhone = normalizePhone(
+            appointment.phone || appointment.user_id?.phone_no
+          );
+          const apptPropertyId = String(appointment.property_id?._id || "");
+
+          const emailMatch = !!leadEmail && leadEmail === apptEmail;
+          const phoneMatch = !!leadPhone && leadPhone === apptPhone;
+          const propertyMatch =
+            leadPropertyIds.length === 0 || leadPropertyIds.includes(apptPropertyId);
+
+          return (emailMatch || phoneMatch) && propertyMatch;
+        })
+        .sort((a, b) => {
+          const aTime = new Date(a.schedule_Time || a.createdAt || 0).getTime();
+          const bTime = new Date(b.schedule_Time || b.createdAt || 0).getTime();
+          return bTime - aTime;
+        });
+
+      map.set(lead._id, matchedAppointments);
+    }
+
+    return map;
+  }, [data, appointments]);
+
+  const openAppointmentModal = (leadId: string) => {
+    const leadAppointments = appointmentsByLeadId.get(leadId) || [];
+    if (!leadAppointments.length) {
+      toast.info("No appointment found for this lead.");
+      return;
+    }
+
+    const latestAppointment = leadAppointments[0];
+    setCurrentAppointment(latestAppointment);
+    setAppointmentForm({
+      status: latestAppointment.status || "Pending",
+      schedule_Time: latestAppointment.schedule_Time
+        ? new Date(latestAppointment.schedule_Time).toISOString().slice(0, 16)
+        : "",
+    });
+    setShowAppointmentModal(true);
+  };
+
+  const handleAppointmentUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentAppointment) return;
+
+    try {
+      await instance.put(`/appointments/${currentAppointment._id}`, {
+        status: appointmentForm.status,
+        schedule_Time: appointmentForm.schedule_Time
+          ? new Date(appointmentForm.schedule_Time).toISOString()
+          : null,
+      });
+
+      setAppointments((prev) =>
+        prev.map((item) =>
+          item._id === currentAppointment._id
+            ? {
+              ...item,
+              status: appointmentForm.status,
+              schedule_Time: appointmentForm.schedule_Time
+                ? new Date(appointmentForm.schedule_Time).toISOString()
+                : undefined,
+            }
+            : item
+        )
+      );
+      setShowAppointmentModal(false);
+      setCurrentAppointment(null);
+      toast.success("Appointment updated successfully!");
+    } catch (err) {
+      console.error("Error updating appointment:", err);
+      toast.error("Failed to update appointment.");
     }
   };
 
@@ -979,6 +1102,84 @@ export default function LeadsTable() {
           </div>
         )}
 
+        {showAppointmentModal && currentAppointment && (
+          <div className="fixed inset-0 bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center z-50 p-4 mt-10">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col">
+              <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  Edit Appointment
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowAppointmentModal(false);
+                    setCurrentAppointment(null);
+                  }}
+                  className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              <form onSubmit={handleAppointmentUpdate} className="p-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Status
+                  </label>
+                  <select
+                    value={appointmentForm.status}
+                    onChange={(e) =>
+                      setAppointmentForm((prev) => ({
+                        ...prev,
+                        status: e.target.value as AppointmentRecord["status"],
+                      }))
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  >
+                    <option value="Pending">Pending</option>
+                    <option value="Confirmed">Confirmed</option>
+                    <option value="Cancelled">Cancelled</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Convert to lead">Convert to lead</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Schedule Date & Time
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={appointmentForm.schedule_Time}
+                    onChange={(e) =>
+                      setAppointmentForm((prev) => ({
+                        ...prev,
+                        schedule_Time: e.target.value,
+                      }))
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  />
+                </div>
+                <div className="flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAppointmentModal(false);
+                      setCurrentAppointment(null);
+                    }}
+                    className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 dark:bg-blue-700 text-white rounded hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
+                  >
+                    Update Appointment
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
         <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <label
@@ -1028,12 +1229,17 @@ export default function LeadsTable() {
                 <th className="py-2 px-4 whitespace-nowrap">Source</th>
                 <th className="py-2 px-4 whitespace-nowrap">Priority</th>
                 <th className="py-2 px-4 whitespace-nowrap">Date</th>
+                <th className="py-2 px-4 whitespace-nowrap">Appointment</th>
                 <th className="py-2 px-4 whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody>
               {displayData.length > 0 ? (
-                displayData.map((lead: any) => (
+                displayData.map((lead: any) => {
+                  const leadAppointments = appointmentsByLeadId.get(lead._id) || [];
+                  const latestAppointment = leadAppointments[0];
+
+                  return (
                   <tr
                     key={lead._id}
                     className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
@@ -1155,6 +1361,22 @@ export default function LeadsTable() {
                     <td className="py-2 px-4 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
                       {lead.timestamp ? new Date(lead.timestamp).toLocaleDateString() : lead.createdAt ? new Date(lead.createdAt).toLocaleDateString() : "-"}
                     </td>
+                    <td className="py-2 px-4 whitespace-nowrap">
+                      {latestAppointment ? (
+                        <div className="text-xs space-y-1">
+                          <div className="font-medium text-gray-900 dark:text-gray-100">
+                            {latestAppointment.status}
+                          </div>
+                          <div className="text-gray-500 dark:text-gray-400">
+                            {latestAppointment.schedule_Time
+                              ? new Date(latestAppointment.schedule_Time).toLocaleString()
+                              : "Not scheduled"}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-400">No appointment</span>
+                      )}
+                    </td>
                     <td className="py-2 px-4 flex gap-2 flex-wrap">
                       <button
                         onClick={() => openEditModal(lead)}
@@ -1162,6 +1384,17 @@ export default function LeadsTable() {
                       >
                         <Edit size={14} />
                         <span>Edit</span>
+                      </button>
+                      <button
+                        onClick={() => openAppointmentModal(lead._id)}
+                        className={`flex items-center gap-1 text-sm px-2 py-1 rounded whitespace-nowrap transition-colors ${leadAppointments.length
+                          ? "bg-indigo-100 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-200 hover:bg-indigo-200 dark:hover:bg-indigo-800"
+                          : "bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed"
+                          }`}
+                        disabled={!leadAppointments.length}
+                      >
+                        <Calendar size={14} />
+                        <span>Appointment</span>
                       </button>
                       <button
                         onClick={() => updateLeadStatus(lead._id, "contacted")}
@@ -1198,11 +1431,12 @@ export default function LeadsTable() {
                       </button>
                     </td>
                   </tr>
-                ))
+                  );
+                })
               ) : (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={9}
                     className="py-4 text-center text-gray-500 dark:text-gray-400"
                   >
                     {isFiltering ? "No matching leads found" : "No leads found"}

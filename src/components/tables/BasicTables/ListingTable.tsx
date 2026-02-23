@@ -9,7 +9,7 @@ import Badge from "../../ui/badge/Badge";
 import { useEffect, useState, useMemo } from "react";
 import instance from "../../../utils/Axios/Axios";
 import { Link, useNavigate } from "react-router-dom";
-import { Pencil, Trash2, Upload, Download, FileText, ChevronUp, ChevronDown } from "lucide-react";
+import { Pencil, Trash2, Upload, Download, FileText, ChevronUp, ChevronDown, Search, X } from "lucide-react";
 import { toast } from "react-toastify";
 import * as XLSX from "xlsx";
 
@@ -36,6 +36,8 @@ interface Property {
   flat_no?: string;
 }
 
+const FALLBACK_PROPERTY_IMAGE = "https://via.placeholder.com/120x80?text=No+Image";
+
 const CATEGORY_BADGE_MAP = {
   rent: { color: "blue", label: "For Rent" },
   sale: { color: "yellow", label: "For Sale" },
@@ -56,7 +58,75 @@ export default function ListingTable() {
   const [availabilityEditValue, setAvailabilityEditValue] = useState<boolean>(true);
   const [isUploading, setIsUploading] = useState(false);
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection } | null>(null);
+  const [filterSearch, setFilterSearch] = useState("");
+  const [filterPropertyName, setFilterPropertyName] = useState("");
+  const [filterFlatNo, setFilterFlatNo] = useState("");
+  const [filterAvailability, setFilterAvailability] = useState<"all" | "available" | "occupied">("all");
+  const [filterDateFrom, setFilterDateFrom] = useState("");
+  const [filterDateTo, setFilterDateTo] = useState("");
   const navigate = useNavigate();
+
+  const hasActiveFilters =
+    filterSearch !== "" ||
+    filterPropertyName !== "" ||
+    filterFlatNo !== "" ||
+    filterAvailability !== "all" ||
+    filterDateFrom !== "" ||
+    filterDateTo !== "";
+
+  const clearFilters = () => {
+    setFilterSearch("");
+    setFilterPropertyName("");
+    setFilterFlatNo("");
+    setFilterAvailability("all");
+    setFilterDateFrom("");
+    setFilterDateTo("");
+    setSortConfig(null);
+  };
+
+  const filteredProperties = useMemo(() => {
+    return properties.filter((p) => {
+      // Text search: match property_name or flat_no
+      if (filterSearch) {
+        const q = filterSearch.toLowerCase();
+        const nameMatch = p.property_name?.toLowerCase().includes(q);
+        const flatMatch = p.flat_no?.toLowerCase().includes(q);
+        if (!nameMatch && !flatMatch) return false;
+      }
+      if (filterPropertyName) {
+        const q = filterPropertyName.toLowerCase();
+        if (!p.property_name?.toLowerCase().includes(q)) return false;
+      }
+      if (filterFlatNo) {
+        const q = filterFlatNo.toLowerCase();
+        if (!p.flat_no?.toLowerCase().includes(q)) return false;
+      }
+      // Availability filter
+      if (filterAvailability === "available" && !p.availability) return false;
+      if (filterAvailability === "occupied" && p.availability) return false;
+      // Date range filter
+      if (filterDateFrom) {
+        const from = new Date(filterDateFrom);
+        const created = new Date(p.createdAt);
+        if (created < from) return false;
+      }
+      if (filterDateTo) {
+        const to = new Date(filterDateTo);
+        to.setHours(23, 59, 59, 999);
+        const created = new Date(p.createdAt);
+        if (created > to) return false;
+      }
+      return true;
+    });
+  }, [
+    properties,
+    filterSearch,
+    filterPropertyName,
+    filterFlatNo,
+    filterAvailability,
+    filterDateFrom,
+    filterDateTo,
+  ]);
 
   const handleSort = (key: SortKey) => {
     let direction: SortDirection = "asc";
@@ -67,7 +137,7 @@ export default function ListingTable() {
   };
 
   const sortedProperties = useMemo(() => {
-    let sortableItems = [...properties];
+    let sortableItems = [...filteredProperties];
     if (sortConfig !== null && sortConfig.key !== null) {
       sortableItems.sort((a, b) => {
         const key = sortConfig.key as keyof Property;
@@ -101,7 +171,7 @@ export default function ListingTable() {
       });
     }
     return sortableItems;
-  }, [properties, sortConfig]);
+  }, [filteredProperties, sortConfig]);
 
   const renderSortIcon = (key: SortKey) => {
     if (!sortConfig || sortConfig.key !== key) {
@@ -112,6 +182,38 @@ export default function ListingTable() {
     ) : (
       <ChevronDown className="w-4 h-4 text-blue-600" />
     );
+  };
+
+  const handleSortSelectChange = (value: string) => {
+    switch (value) {
+      case "date_desc":
+        setSortConfig({ key: "createdAt", direction: "desc" });
+        break;
+      case "date_asc":
+        setSortConfig({ key: "createdAt", direction: "asc" });
+        break;
+      case "name_asc":
+        setSortConfig({ key: "property_name", direction: "asc" });
+        break;
+      case "name_desc":
+        setSortConfig({ key: "property_name", direction: "desc" });
+        break;
+      case "flat_asc":
+        setSortConfig({ key: "flat_no", direction: "asc" });
+        break;
+      case "flat_desc":
+        setSortConfig({ key: "flat_no", direction: "desc" });
+        break;
+      case "availability_asc":
+        setSortConfig({ key: "availability", direction: "asc" });
+        break;
+      case "availability_desc":
+        setSortConfig({ key: "availability", direction: "desc" });
+        break;
+      default:
+        setSortConfig(null);
+        break;
+    }
   };
 
   const fetchProperties = async () => {
@@ -299,15 +401,18 @@ export default function ListingTable() {
   };
 
   const handleBulkUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(event.target.files || []);
+    if (files.length === 0) return;
 
     const formData = new FormData();
-    formData.append("file", file);
+    files.forEach((file) => formData.append("file", file));
 
     try {
       setIsUploading(true);
-      const loadingToast = toast.info("Uploading listing...", { autoClose: false });
+      const loadingToast = toast.info(
+        `Uploading ${files.length} file${files.length > 1 ? "s" : ""}...`,
+        { autoClose: false }
+      );
 
       const response = await instance.post("/property/bulk-upload", formData);
 
@@ -315,7 +420,7 @@ export default function ListingTable() {
 
       const { summary } = response.data;
       toast.success(
-        `Upload completed! ${summary.success} properties added, ${summary.skipped} duplicates skipped.`
+        `Upload completed! ${summary.success} properties added, ${summary.skipped} duplicates skipped, ${summary.failed} failed.`
       );
 
       // Refresh the list
@@ -372,7 +477,7 @@ export default function ListingTable() {
           <Table>
             <TableHeader>
               <TableRow>
-                {[...Array(10)].map((_, i) => (
+                {[...Array(11)].map((_, i) => (
                   <TableCell isHeader key={i}>
                     <div className="h-6 w-24 bg-gray-100 rounded animate-pulse" />
                   </TableCell>
@@ -382,7 +487,7 @@ export default function ListingTable() {
             <TableBody>
               {[...Array(5)].map((_, rowIndex) => (
                 <TableRow key={rowIndex}>
-                  {[...Array(10)].map((_, cellIndex) => (
+                  {[...Array(11)].map((_, cellIndex) => (
                     <TableCell key={cellIndex}>
                       <div className="h-6 w-full bg-gray-100 rounded animate-pulse" />
                     </TableCell>
@@ -459,7 +564,8 @@ export default function ListingTable() {
           {isUploading ? "Uploading..." : "Bulk Upload (Excel)"}
           <input
             type="file"
-            accept=".xlsx,.xls"
+            accept=".xlsx,.xls,.csv"
+            multiple
             className="hidden"
             onChange={handleBulkUpload}
             disabled={isUploading}
@@ -473,6 +579,138 @@ export default function ListingTable() {
           <Download size={16} />
           Export Excel
         </button>
+      </div>
+
+      {/* Filter Bar */}
+      <div className="flex flex-wrap items-end gap-3 p-4 bg-white rounded-xl border border-gray-200 shadow-sm">
+        {/* Search by Property Name / Flat No */}
+        <div className="flex-1 min-w-[200px]">
+          <label className="block text-xs font-medium text-gray-500 mb-1">Search</label>
+          <div className="relative">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Property name or flat no..."
+              value={filterSearch}
+              onChange={(e) => setFilterSearch(e.target.value)}
+              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50"
+            />
+          </div>
+        </div>
+
+        {/* Availability Filter */}
+        <div className="min-w-[150px]">
+          <label className="block text-xs font-medium text-gray-500 mb-1">Availability</label>
+          <select
+            value={filterAvailability}
+            onChange={(e) => setFilterAvailability(e.target.value as "all" | "available" | "occupied")}
+            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 cursor-pointer"
+          >
+            <option value="all">All</option>
+            <option value="available">Available</option>
+            <option value="occupied">Occupied</option>
+          </select>
+        </div>
+
+        {/* Property Name Filter */}
+        <div className="min-w-[200px]">
+          <label className="block text-xs font-medium text-gray-500 mb-1">Property Name</label>
+          <input
+            type="text"
+            placeholder="Filter by property name"
+            value={filterPropertyName}
+            onChange={(e) => setFilterPropertyName(e.target.value)}
+            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50"
+          />
+        </div>
+
+        {/* Flat No Filter */}
+        <div className="min-w-[170px]">
+          <label className="block text-xs font-medium text-gray-500 mb-1">Flat No</label>
+          <input
+            type="text"
+            placeholder="Filter by flat number"
+            value={filterFlatNo}
+            onChange={(e) => setFilterFlatNo(e.target.value)}
+            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50"
+          />
+        </div>
+
+        {/* Date From */}
+        <div className="min-w-[150px]">
+          <label className="block text-xs font-medium text-gray-500 mb-1">Date From</label>
+          <input
+            type="date"
+            value={filterDateFrom}
+            onChange={(e) => setFilterDateFrom(e.target.value)}
+            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50"
+          />
+        </div>
+
+        {/* Sort Select */}
+        <div className="min-w-[200px]">
+          <label className="block text-xs font-medium text-gray-500 mb-1">Sort By</label>
+          <select
+            value={
+              !sortConfig
+                ? "default"
+                : sortConfig.key === "createdAt" && sortConfig.direction === "desc"
+                  ? "date_desc"
+                  : sortConfig.key === "createdAt" && sortConfig.direction === "asc"
+                    ? "date_asc"
+                    : sortConfig.key === "property_name" && sortConfig.direction === "asc"
+                      ? "name_asc"
+                      : sortConfig.key === "property_name" && sortConfig.direction === "desc"
+                        ? "name_desc"
+                        : sortConfig.key === "flat_no" && sortConfig.direction === "asc"
+                          ? "flat_asc"
+                          : sortConfig.key === "flat_no" && sortConfig.direction === "desc"
+                            ? "flat_desc"
+                            : sortConfig.key === "availability" && sortConfig.direction === "asc"
+                              ? "availability_asc"
+                              : "availability_desc"
+            }
+            onChange={(e) => handleSortSelectChange(e.target.value)}
+            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 cursor-pointer"
+          >
+            <option value="default">Default</option>
+            <option value="date_desc">Date: Newest first</option>
+            <option value="date_asc">Date: Oldest first</option>
+            <option value="name_asc">Property Name: A-Z</option>
+            <option value="name_desc">Property Name: Z-A</option>
+            <option value="flat_asc">Flat No: Ascending</option>
+            <option value="flat_desc">Flat No: Descending</option>
+            <option value="availability_asc">Availability: Available first</option>
+            <option value="availability_desc">Availability: Occupied first</option>
+          </select>
+        </div>
+
+        {/* Date To */}
+        <div className="min-w-[150px]">
+          <label className="block text-xs font-medium text-gray-500 mb-1">Date To</label>
+          <input
+            type="date"
+            value={filterDateTo}
+            onChange={(e) => setFilterDateTo(e.target.value)}
+            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50"
+          />
+        </div>
+
+        {/* Clear Filters */}
+        {hasActiveFilters && (
+          <button
+            onClick={clearFilters}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition-colors"
+          >
+            <X size={14} />
+            Clear
+          </button>
+        )}
+
+        {/* Result count */}
+        <div className="text-xs text-gray-400 self-end pb-1">
+          {filteredProperties.length} of {properties.length} results
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
@@ -494,6 +732,12 @@ export default function ListingTable() {
                     Property
                     {renderSortIcon("property_name")}
                   </div>
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="text-left px-5 py-3 text-gray-900 font-medium"
+                >
+                  Image
                 </TableCell>
                 <TableCell
                   isHeader
@@ -587,6 +831,20 @@ export default function ListingTable() {
                           {property.description}
                         </p>
                       </Link>
+                    </TableCell>
+                    <TableCell className="text-left px-5 py-3 text-gray-900">
+                      <img
+                        src={property.images?.[0] || FALLBACK_PROPERTY_IMAGE}
+                        alt={property.property_name}
+                        className="w-20 h-14 rounded-md object-cover border border-gray-200"
+                        loading="lazy"
+                        onError={(e) => {
+                          const target = e.currentTarget;
+                          if (target.src !== FALLBACK_PROPERTY_IMAGE) {
+                            target.src = FALLBACK_PROPERTY_IMAGE;
+                          }
+                        }}
+                      />
                     </TableCell>
                     <TableCell className="text-left px-5 py-3 text-gray-900">
                       {getCategoryBadge(property.category)}

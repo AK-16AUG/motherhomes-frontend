@@ -165,10 +165,12 @@ export default function DataTableWithStatus() {
 
   const downloadSampleTemplate = () => {
     const sampleData = [{
-      User_Name: "John Doe",
+      User_ID: "",
       Email: "john@example.com",
+      Property_ID: "",
       Property_Name: "Sunrise Apartment",
-      Scheduled_Date: "2025-01-15",
+      Scheduled_Date: "2025-01-15T10:30",
+      Phone: "9876543210",
       Status: "Pending",
     }];
     const ws = XLSX.utils.json_to_sheet(sampleData);
@@ -187,10 +189,67 @@ export default function DataTableWithStatus() {
       const ws = wb.Sheets[wb.SheetNames[0]];
       const rows: any[] = XLSX.utils.sheet_to_json(ws);
       if (rows.length === 0) { toast.error("No data found in file"); return; }
-      toast.info(`Processing ${rows.length} appointments...`);
-      // Note: bulk appointment creation requires user_id and property_id which are IDs
-      // This template is for reference; actual bulk import needs ID mapping
-      toast.warning("Bulk appointment upload requires valid user and property IDs. Please use the admin panel for individual appointments.");
+      const [usersResponse, propertiesResponse] = await Promise.all([
+        instance.get("/user?page=1&limit=5000"),
+        instance.get("/property"),
+      ]);
+      const users = usersResponse.data?.users || [];
+      const properties = propertiesResponse.data?.results || [];
+
+      const validStatuses = new Set([
+        "Pending",
+        "Confirmed",
+        "Cancelled",
+        "Completed",
+        "Convert to lead",
+      ]);
+
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const row of rows) {
+        try {
+          const userIdFromSheet = String(row["User_ID"] || "").trim();
+          const userEmailFromSheet = String(row["Email"] || "").trim().toLowerCase();
+          const matchedUser = userIdFromSheet
+            ? users.find((u: any) => u._id === userIdFromSheet)
+            : users.find((u: any) => String(u.email || "").toLowerCase() === userEmailFromSheet);
+
+          const propertyIdFromSheet = String(row["Property_ID"] || "").trim();
+          const propertyNameFromSheet = String(row["Property_Name"] || "").trim().toLowerCase();
+          const matchedProperty = propertyIdFromSheet
+            ? properties.find((p: any) => p._id === propertyIdFromSheet)
+            : properties.find(
+              (p: any) => String(p.property_name || "").toLowerCase() === propertyNameFromSheet
+            );
+
+          const rawStatus = String(row["Status"] || "Pending").trim();
+          const status = validStatuses.has(rawStatus) ? rawStatus : "Pending";
+
+          const scheduledAt = row["Scheduled_Date"] || row["Schedule_Time"] || row["Date"];
+          if (!matchedUser?._id || !matchedProperty?._id) {
+            errorCount++;
+            continue;
+          }
+
+          await instance.post("/appointments", {
+            user_id: matchedUser._id,
+            property_id: matchedProperty._id,
+            phone: String(row["Phone"] || "").trim(),
+            status,
+            schedule_Time: scheduledAt ? new Date(scheduledAt).toISOString() : undefined,
+          });
+          successCount++;
+        } catch {
+          errorCount++;
+        }
+      }
+
+      toast.success(
+        `Bulk upload: ${successCount} appointments added${errorCount > 0 ? `, ${errorCount} failed` : ""}.`
+      );
+      setPage(1);
+      await fetchAppointments(1);
     } catch (err: any) {
       console.error("Bulk upload processing failed:", err);
       if (err.response?.status === 401) {

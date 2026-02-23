@@ -22,6 +22,12 @@ instance.interceptors.request.use(
     if (token && token !== "null" && token !== "undefined" && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // Let browser set multipart boundary for FormData requests.
+    if (typeof FormData !== "undefined" && config.data instanceof FormData) {
+      delete config.headers["Content-Type"];
+    }
+
     return config;
   },
   (error) => Promise.reject(error)
