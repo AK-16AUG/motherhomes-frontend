@@ -141,34 +141,45 @@ export default function RegisteredUserTable() {
       const ws = wb.Sheets[wb.SheetNames[0]];
       const rows: any[] = XLSX.utils.sheet_to_json(ws);
       if (rows.length === 0) { toast.error("No data found in file"); return; }
+      const failures: Array<{ row: number; reason: string; fix: string }> = [];
       let successCount = 0;
       let errorCount = 0;
 
-      for (const row of rows) {
+      for (const [index, row] of rows.entries()) {
         try {
-          const email = String(row["Email"] || "").trim();
-          if (!email) {
-            errorCount++;
-            continue;
-          }
+          const fallbackEmail = `user_${Date.now()}_${index + 1}@motherhomes.local`;
+          const email = String(row["Email"] || "").trim() || fallbackEmail;
+          const userName = String(row["Name"] || "").trim() || email.split("@")[0] || "User";
 
           await instance.post("/user", {
-            User_Name: row["Name"] || "User",
+            User_Name: userName,
             email,
-            phone_no: String(row["Phone"] || "").trim(),
+            phone_no: String(row["Phone"] || "").trim() || 0,
             password: row["Password"] || "User@123",
             role: "user",
             isVerified: true,
           });
           successCount++;
-        } catch {
+        } catch (err: any) {
           errorCount++;
+          failures.push({
+            row: index + 2,
+            reason: err?.response?.data?.message || err?.message || "Unknown error",
+            fix: "Use a unique email and valid phone number format. Keep template headers unchanged.",
+          });
         }
       }
 
       toast.success(
         `Bulk upload: ${successCount} users added${errorCount > 0 ? `, ${errorCount} failed` : ""}.`
       );
+      if (failures.length) {
+        const preview = failures
+          .slice(0, 3)
+          .map((f) => `Row ${f.row}: ${f.reason}. Fix: ${f.fix}`)
+          .join(" | ");
+        toast.warning(`${preview}${failures.length > 3 ? ` | +${failures.length - 3} more` : ""}`, { autoClose: 9000 });
+      }
 
       setCurrentPage(1);
       const response = await instance.get(`${API_BASE_URL}?page=1&limit=${entriesPerPage}`);
@@ -176,8 +187,8 @@ export default function RegisteredUserTable() {
       setData(userData.users || []);
       setTotalEntries(userData.total || 0);
       setTotalPages(Math.ceil((userData.total || 0) / entriesPerPage) || 1);
-    } catch {
-      toast.error("Failed to process bulk upload file.");
+    } catch (err: any) {
+      toast.error(`${err?.response?.data?.message || "Failed to process bulk upload file."} Fix: Upload .xlsx/.xls and keep sample template headers.`);
     }
     if (bulkUploadRef.current) bulkUploadRef.current.value = "";
   };

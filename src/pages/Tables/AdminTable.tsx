@@ -162,21 +162,41 @@ export default function AdminTable() {
       const ws = wb.Sheets[wb.SheetNames[0]];
       const rows: any[] = XLSX.utils.sheet_to_json(ws);
       if (rows.length === 0) { toast.error("No data found in file"); return; }
-      let successCount = 0, errorCount = 0;
-      for (const row of rows) {
+      const failures: Array<{ row: number; reason: string; fix: string }> = [];
+      let successCount = 0;
+      let errorCount = 0;
+      for (const [index, row] of rows.entries()) {
         try {
+          const fallbackEmail = `admin_${Date.now()}_${index + 1}@motherhomes.local`;
+          const email = String(row["Email"] || "").trim() || fallbackEmail;
+          const name = String(row["Name"] || "").trim() || email.split("@")[0] || "Admin";
+
           await instance.post("/user/admin", {
-            User_Name: row["Name"] || "",
-            email: row["Email"] || "",
-            phone_no: row["Phone"] || "",
+            User_Name: name,
+            email,
+            phone_no: row["Phone"] || 0,
             password: row["Password"] || "Admin@123",
             role: "admin",
             isVerified: true,
           });
           successCount++;
-        } catch { errorCount++; }
+        } catch (err: any) {
+          errorCount++;
+          failures.push({
+            row: index + 2,
+            reason: err?.response?.data?.message || err?.message || "Unknown error",
+            fix: "Ensure Email is unique and valid. Keep Phone numeric. Use sample template column names.",
+          });
+        }
       }
       toast.success(`Bulk upload: ${successCount} admins added${errorCount > 0 ? `, ${errorCount} failed` : ""}.`);
+      if (failures.length) {
+        const preview = failures
+          .slice(0, 3)
+          .map((f) => `Row ${f.row}: ${f.reason}. Fix: ${f.fix}`)
+          .join(" | ");
+        toast.warning(`${preview}${failures.length > 3 ? ` | +${failures.length - 3} more` : ""}`, { autoClose: 9000 });
+      }
       const res = await instance.get("/user/admins");
       setAdmins(res.data);
     } catch (err: any) {
@@ -185,7 +205,7 @@ export default function AdminTable() {
         toast.error("Session expired. Please login again.");
         setTimeout(() => navigate("/signin"), 2000);
       } else {
-        toast.error("Failed to process bulk upload file.");
+        toast.error(`${err.response?.data?.message || "Failed to process bulk upload file."} Fix: Upload .xlsx/.xls using sample template headers.`);
       }
     }
     if (bulkUploadRef.current) bulkUploadRef.current.value = "";

@@ -473,12 +473,17 @@ export default function LeadsTable() {
       const ws = wb.Sheets[wb.SheetNames[0]];
       const rows: any[] = XLSX.utils.sheet_to_json(ws);
       if (rows.length === 0) { toast.error("No data found in file"); return; }
+      const failures: Array<{ row: number; reason: string; fix: string }> = [];
       let successCount = 0;
       let errorCount = 0;
-      for (const row of rows) {
+      for (const [index, row] of rows.entries()) {
         try {
+          const fallbackEmail = `lead_${Date.now()}_${index + 1}@motherhomes.local`;
+          const email = String(row["Email"] || "").trim() || fallbackEmail;
+          const name = String(row["Name"] || "").trim() || email.split("@")[0] || "Unknown Lead";
+
           await instance.post("/leads", {
-            contactInfo: { name: row["Name"] || "", email: row["Email"] || "", phone: row["Phone"] || "" },
+            contactInfo: { name, email, phone: row["Phone"] || "" },
             status: row["Status"] || "new",
             source: row["Source"] || "website",
             priority: row["Priority"] || "medium",
@@ -487,15 +492,29 @@ export default function LeadsTable() {
             matchedProperties: [],
           });
           successCount++;
-        } catch { errorCount++; }
+        } catch (err: any) {
+          errorCount++;
+          failures.push({
+            row: index + 2,
+            reason: err?.response?.data?.message || err?.message || "Unknown error",
+            fix: "Keep status as new/inquiry/contacted/converted/archived and keep email/phone format valid.",
+          });
+        }
       }
       toast.success(`Bulk upload: ${successCount} leads added${errorCount > 0 ? `, ${errorCount} failed` : ""}.`);
+      if (failures.length) {
+        const preview = failures
+          .slice(0, 3)
+          .map((f) => `Row ${f.row}: ${f.reason}. Fix: ${f.fix}`)
+          .join(" | ");
+        toast.warning(`${preview}${failures.length > 3 ? ` | +${failures.length - 3} more` : ""}`, { autoClose: 9000 });
+      }
       const response = await instance.get(`/leads?page=1&limit=${entriesPerPage}`);
       setData(response.data.results || []);
       setTotalEntries(response.data.total || 0);
       setTotalPages(Math.ceil(response.data.total / entriesPerPage) || 0);
-    } catch (err) {
-      toast.error("Failed to process bulk upload file.");
+    } catch (err: any) {
+      toast.error(`${err?.response?.data?.message || "Failed to process bulk upload file."} Fix: Upload .xlsx/.xls and keep sample template headers.`);
     }
     if (bulkUploadRef.current) bulkUploadRef.current.value = "";
   };

@@ -204,16 +204,31 @@ export default function DataTableWithStatus() {
         "Convert to lead",
       ]);
 
+      const failures: Array<{ row: number; reason: string; fix: string }> = [];
       let successCount = 0;
       let errorCount = 0;
 
-      for (const row of rows) {
+      for (const [index, row] of rows.entries()) {
         try {
           const userIdFromSheet = String(row["User_ID"] || "").trim();
           const userEmailFromSheet = String(row["Email"] || "").trim().toLowerCase();
-          const matchedUser = userIdFromSheet
+          let matchedUser = userIdFromSheet
             ? users.find((u: any) => u._id === userIdFromSheet)
             : users.find((u: any) => String(u.email || "").toLowerCase() === userEmailFromSheet);
+
+          if (!matchedUser?._id) {
+            const fallbackEmail =
+              String(row["Email"] || "").trim() || `appt_${Date.now()}_${index + 1}@motherhomes.local`;
+            const createdUser = await instance.post("/user", {
+              User_Name: String(row["User_Name"] || "").trim() || fallbackEmail.split("@")[0] || "User",
+              email: fallbackEmail,
+              phone_no: String(row["Phone"] || "").trim() || 0,
+              password: "User@123",
+              role: "user",
+              isVerified: true,
+            });
+            matchedUser = createdUser?.data?.user || createdUser?.data;
+          }
 
           const propertyIdFromSheet = String(row["Property_ID"] || "").trim();
           const propertyNameFromSheet = String(row["Property_Name"] || "").trim().toLowerCase();
@@ -229,6 +244,13 @@ export default function DataTableWithStatus() {
           const scheduledAt = row["Scheduled_Date"] || row["Schedule_Time"] || row["Date"];
           if (!matchedUser?._id || !matchedProperty?._id) {
             errorCount++;
+            failures.push({
+              row: index + 2,
+              reason: !matchedProperty?._id ? "Property not found by Property_ID/Property_Name" : "User could not be resolved",
+              fix: !matchedProperty?._id
+                ? "Provide valid Property_ID or exact Property_Name from listing."
+                : "Provide User_ID/Email or allow user auto-create with a valid email format.",
+            });
             continue;
           }
 
@@ -240,14 +262,26 @@ export default function DataTableWithStatus() {
             schedule_Time: scheduledAt ? new Date(scheduledAt).toISOString() : undefined,
           });
           successCount++;
-        } catch {
+        } catch (err: any) {
           errorCount++;
+          failures.push({
+            row: index + 2,
+            reason: err?.response?.data?.message || err?.message || "Unknown error",
+            fix: "Keep date in ISO/date-time format and ensure property mapping is valid.",
+          });
         }
       }
 
       toast.success(
         `Bulk upload: ${successCount} appointments added${errorCount > 0 ? `, ${errorCount} failed` : ""}.`
       );
+      if (failures.length) {
+        const preview = failures
+          .slice(0, 3)
+          .map((f) => `Row ${f.row}: ${f.reason}. Fix: ${f.fix}`)
+          .join(" | ");
+        toast.warning(`${preview}${failures.length > 3 ? ` | +${failures.length - 3} more` : ""}`, { autoClose: 9000 });
+      }
       setPage(1);
       await fetchAppointments(1);
     } catch (err: any) {
@@ -256,7 +290,7 @@ export default function DataTableWithStatus() {
         toast.error("Session expired. Please login again.");
         setTimeout(() => navigate("/signin"), 2000);
       } else {
-        toast.error("Failed to process bulk upload file.");
+        toast.error(`${err.response?.data?.message || "Failed to process bulk upload file."} Fix: Upload .xlsx/.xls and keep sample template headers.`);
       }
     }
     if (bulkUploadRef.current) bulkUploadRef.current.value = "";

@@ -422,6 +422,17 @@ export default function ListingTable() {
       toast.success(
         `Upload completed! ${summary.success} properties added, ${summary.skipped} duplicates skipped, ${summary.failed} failed.`
       );
+      const errorItems: any[] = response.data?.errors || [];
+      if (errorItems.length > 0) {
+        const preview = errorItems
+          .slice(0, 3)
+          .map((item) => `Row ${item.rowNumber}: ${item.reason || item.error}. Fix: ${item.fix || "Review row values."}`)
+          .join(" | ");
+        toast.warning(
+          `Some rows failed. ${preview}${errorItems.length > 3 ? ` | +${errorItems.length - 3} more` : ""}`,
+          { autoClose: 9000 }
+        );
+      }
 
       // Refresh the list
       fetchProperties();
@@ -433,7 +444,10 @@ export default function ListingTable() {
         toast.error("Session expired. Please login again.");
         setTimeout(() => navigate("/signin"), 2000);
       } else {
-        toast.error(err.response?.data?.message || "Bulk upload failed");
+        const reason = err.response?.data?.message || "Bulk upload failed";
+        const firstError = err.response?.data?.errors?.[0];
+        const fix = firstError?.fix || "Use the sample template format and keep numeric/date fields valid.";
+        toast.error(`${reason}. Fix: ${fix}`);
       }
     } finally {
       setIsUploading(false);

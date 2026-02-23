@@ -418,10 +418,11 @@ export default function DataTable() {
       if (rows.length === 0) { toast.error("No data found in file"); return; }
       const usersResponse = await instance.get("/user?page=1&limit=5000");
       const existingUsers: any[] = usersResponse.data?.users || [];
+      const failures: Array<{ row: number; reason: string; fix: string }> = [];
       let successCount = 0;
       let errorCount = 0;
 
-      for (const row of rows) {
+      for (const [index, row] of rows.entries()) {
         try {
           const propertyIdFromSheet = String(row["Property_ID"] || "").trim();
           const propertyNameFromSheet = String(row["Property_Name"] || "").trim().toLowerCase();
@@ -432,6 +433,11 @@ export default function DataTable() {
 
           if (!matchedProperty?._id) {
             errorCount++;
+            failures.push({
+              row: index + 2,
+              reason: "Property not found by Property_ID/Property_Name",
+              fix: "Use a valid Property_ID or exact Property_Name from listing page.",
+            });
             continue;
           }
 
@@ -440,11 +446,11 @@ export default function DataTable() {
 
           const payload: any = {
             property_id: matchedProperty._id,
-            flatNo: String(row["Flat_No"] || row["FlatNo"] || "").trim(),
-            society: String(row["Society"] || "").trim(),
+            flatNo: String(row["Flat_No"] || row["FlatNo"] || "").trim() || `AUTO-${index + 2}`,
+            society: String(row["Society"] || "").trim() || "Unknown Society",
             members: String(Number(row["Members"]) || 1),
             startDate: row["Start_Date"] || row["StartDate"] || new Date().toISOString(),
-            rent: String(row["Rent"] || "").trim(),
+            rent: String(row["Rent"] || "").trim() || "0",
             property_type,
           };
 
@@ -453,20 +459,21 @@ export default function DataTable() {
               .split(",")
               .map((email) => email.trim())
               .filter(Boolean);
-            payload.name = String(row["Tenant_Name"] || "").trim();
+            const tenantEmail = String(row["Tenant_Email"] || "").trim();
+            const fallbackEmail = tenantEmail || `tenant_${Date.now()}_${index + 1}@motherhomes.local`;
+            payload.name = String(row["Tenant_Name"] || "").trim() || fallbackEmail.split("@")[0];
             payload.users = users;
-            if (!payload.name || users.length === 0) {
-              errorCount++;
-              continue;
+            if (users.length === 0) {
+              payload.users = [fallbackEmail];
             }
 
-            for (const email of users) {
+            for (const email of payload.users) {
               const exists = existingUsers.some(
                 (u) => String(u.email || "").toLowerCase() === email.toLowerCase()
               );
               if (!exists) {
                 await instance.post("/user", {
-                  User_Name: email.split("@")[0] || "Tenant User",
+                  User_Name: payload.name || email.split("@")[0] || "Tenant User",
                   email,
                   phone_no: 0,
                   password: "User@123",
@@ -489,27 +496,42 @@ export default function DataTable() {
               .filter((item) => item.name && item.email);
 
             if (!tenantDetails.length) {
-              errorCount++;
-              continue;
+              const fallbackEmail = `pgtenant_${Date.now()}_${index + 1}@motherhomes.local`;
+              tenantDetails.push({
+                name: String(row["Tenant_Name"] || "").trim() || "PG Tenant",
+                email: String(row["Tenant_Email"] || "").trim() || fallbackEmail,
+              });
             }
             payload.tenantDetails = tenantDetails;
           }
 
           await instance.post(API_BASE_URL, payload);
           successCount++;
-        } catch {
+        } catch (err: any) {
           errorCount++;
+          failures.push({
+            row: index + 2,
+            reason: err?.response?.data?.message || err?.message || "Unknown error",
+            fix: "Check property mapping and tenant emails. Use `name:email` pairs for Tenant_Details in PG rows.",
+          });
         }
       }
 
       toast.success(
         `Bulk upload: ${successCount} tenants added${errorCount > 0 ? `, ${errorCount} failed` : ""}.`
       );
+      if (failures.length) {
+        const preview = failures
+          .slice(0, 3)
+          .map((f) => `Row ${f.row}: ${f.reason}. Fix: ${f.fix}`)
+          .join(" | ");
+        toast.warning(`${preview}${failures.length > 3 ? ` | +${failures.length - 3} more` : ""}`, { autoClose: 9000 });
+      }
 
       const tenantsResponse = await instance.get(API_BASE_URL);
       setData(tenantsResponse.data?.data || []);
-    } catch {
-      toast.error("Failed to process bulk upload file.");
+    } catch (err: any) {
+      toast.error(`${err?.response?.data?.message || "Failed to process bulk upload file."} Fix: Upload .xlsx/.xls and keep sample template headers.`);
     }
     if (bulkUploadRef.current) bulkUploadRef.current.value = "";
   };
