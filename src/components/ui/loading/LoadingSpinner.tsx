@@ -27,7 +27,7 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
 
   return (
     <div
-      className={`inline-block animate-spin ${sizeClasses[size]} ${colorClasses[color]} ${className}`}
+      className={`inline-block ${sizeClasses[size]} ${colorClasses[color]} ${className}`}
     >
       <svg
         className="w-full h-full"

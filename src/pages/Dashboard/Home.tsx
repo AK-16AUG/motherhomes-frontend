@@ -80,8 +80,8 @@ export default function Home() {
   const sectionLoader = useMemo(
     () => (
       <div className="rounded-2xl border border-gray-200 bg-white p-5">
-        <div className="h-6 w-40 animate-pulse rounded bg-gray-100" />
-        <div className="mt-4 h-40 animate-pulse rounded bg-gray-100" />
+        <div className="h-6 w-40 rounded bg-gray-100" />
+        <div className="mt-4 h-40 rounded bg-gray-100" />
       </div>
     ),
     []

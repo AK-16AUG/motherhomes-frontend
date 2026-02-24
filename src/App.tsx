@@ -12,6 +12,7 @@ import Calendar from "./pages/Calendar";
 import AllListing from "./pages/Tables/ListingTable";
 import AppointmentTables from "./pages/Tables/AppointmentTable";
 import Addlisting from "./pages/Forms/ListingForm";
+import MultiListingForm from "./pages/Forms/MultiListingForm";
 import AppLayout from "./layout/AppLayout";
 import { ScrollToTop } from "./components/common/ScrollToTop";
 import Home from "./pages/Dashboard/Home";
@@ -146,6 +147,14 @@ export default function App() {
               element={
                 <ProtectedRoute allowedRoles={["admin", "superadmin"]}>
                   <Addlisting />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/add-multi-listing"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "superadmin"]}>
+                  <MultiListingForm />
                 </ProtectedRoute>
               }
             />

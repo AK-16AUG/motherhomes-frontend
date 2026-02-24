@@ -336,7 +336,7 @@ export default function DataTableWithStatus() {
 
   // Loading skeleton component
   const TableSkeleton = () => (
-    <div className="animate-pulse">
+    <div className="">
       {[...Array(5)].map((_, index) => (
         <tr key={index} className="border-b dark:border-gray-700">
           <td className="py-3 px-2 sm:px-4">

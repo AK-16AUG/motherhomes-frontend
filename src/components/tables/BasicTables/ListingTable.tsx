@@ -493,7 +493,7 @@ export default function ListingTable() {
               <TableRow>
                 {[...Array(11)].map((_, i) => (
                   <TableCell isHeader key={i}>
-                    <div className="h-6 w-24 bg-gray-100 rounded animate-pulse" />
+                    <div className="h-6 w-24 bg-gray-100 rounded" />
                   </TableCell>
                 ))}
               </TableRow>
@@ -503,7 +503,7 @@ export default function ListingTable() {
                 <TableRow key={rowIndex}>
                   {[...Array(11)].map((_, cellIndex) => (
                     <TableCell key={cellIndex}>
-                      <div className="h-6 w-full bg-gray-100 rounded animate-pulse" />
+                      <div className="h-6 w-full bg-gray-100 rounded" />
                     </TableCell>
                   ))}
                 </TableRow>
@@ -568,6 +568,13 @@ export default function ListingTable() {
           <FileText size={16} />
           Sample Template
         </button>
+        <Link
+          to="/add-multi-listing"
+          className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors bg-blue-600 text-white hover:bg-blue-700 mx-2 shadow-sm"
+          title="Add Multiple Listings at Once"
+        >
+          Add Multiple Listings
+        </Link>
         <label className={`
           flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer
           ${isUploading
