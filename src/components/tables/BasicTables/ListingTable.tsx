@@ -219,7 +219,7 @@ export default function ListingTable() {
   const fetchProperties = async () => {
     try {
       setState("loading");
-      const response = await instance.get(`/property`);
+      const response = await instance.get(`/property?limit=1000`);
 
       if (Array.isArray(response.data)) {
         setProperties(response.data);
@@ -245,7 +245,7 @@ export default function ListingTable() {
       try {
         setState("loading");
         setError(null);
-        const response = await instance.get(`/property`);
+        const response = await instance.get(`/property?limit=1000`);
 
         console.log("API Response:", response.data);
 
