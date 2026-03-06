@@ -333,6 +333,12 @@ export default function LeadsTable() {
     }
   };
 
+  const normalizePhone = (value?: string | number) => {
+    if (!value) return "";
+    const digits = String(value).replace(/\D/g, "");
+    return digits.length >= 10 ? digits.slice(-10) : digits;
+  };
+
   const handleConvertLead = async (lead: any) => {
     if (lead.status === "converted") return;
     try {
@@ -341,7 +347,9 @@ export default function LeadsTable() {
       const name = lead.contactInfo?.name || "Converted User";
       const fallbackEmail = `lead_${lead._id}@motherhomes.local`;
       const email = lead.contactInfo?.email || fallbackEmail;
-      const phone_no = lead.contactInfo?.phone || "0000000000";
+
+      const rawPhone = normalizePhone(lead.contactInfo?.phone);
+      const phone_no = rawPhone ? Number(rawPhone) : 0;
 
       // Create user
       try {
@@ -356,29 +364,34 @@ export default function LeadsTable() {
         toast.success("User profile created for lead!");
       } catch (userErr: any) {
         console.error("Error creating user from lead:", userErr);
-        // Might already exist; proceed with lead update anyway.
-        toast.info(userErr.response?.data?.message || "User might already exist. Proceeding with conversion...");
+        const errorMsg = userErr.response?.data?.message || userErr.message;
+        if (errorMsg !== "User already exists") {
+          toast.info(`Notice during user creation: ${errorMsg}`);
+        }
       }
 
       // Update lead status
-      await instance.put(`${API_BASE_URL}/${lead._id}`, { status: "converted" });
-      setData(
-        data.map((l: any) =>
-          l._id === lead._id ? { ...l, status: "converted" } : l
-        )
-      );
-      toast.success("Lead marked as converted!");
-
+      try {
+        await instance.put(`${API_BASE_URL}/${lead._id}`, { status: "converted" });
+        setData(
+          data.map((l: any) =>
+            l._id === lead._id ? { ...l, status: "converted" } : l
+          )
+        );
+        toast.success("Lead marked as converted!");
+      } catch (putErr: any) {
+        console.error("Error updating lead status:", putErr);
+        const putErrMsg = putErr.response?.data?.message || putErr.message;
+        toast.error(`Failed to update lead status: ${putErrMsg}`);
+      }
     } catch (err: any) {
-      console.error("Error converting lead:", err);
-      toast.error("Failed to convert lead status.");
+      console.error("Unexpected error during conversion:", err);
+      toast.error("An unexpected error occurred during lead conversion.");
     } finally {
       setLoading(false);
     }
   };
 
-  const normalizePhone = (value?: string | number) =>
-    String(value || "").replace(/\D/g, "").slice(-10);
 
   const appointmentsByLeadId = useMemo(() => {
     const map = new Map<string, AppointmentRecord[]>();
