@@ -20,6 +20,7 @@ interface UserData {
   User_Name: string;
   email: string;
   phone_no: string;
+  comment?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -36,6 +37,12 @@ export default function RegisteredUserTable() {
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Edit & Comment states
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<UserData | null>(null);
+  const [editForm, setEditForm] = useState({ User_Name: "", phone_no: "", comment: "" });
+
   const navigate = useNavigate(); // Initialize useNavigate
   const bulkUploadRef = useRef<HTMLInputElement>(null);
 
@@ -109,6 +116,28 @@ export default function RegisteredUserTable() {
       currentPage * entriesPerPage
     )
     : displayData;
+
+  const handleEditSubmit = async () => {
+    if (!editingUser) return;
+    try {
+      setLoading(true);
+      await instance.put(`${API_BASE_URL}/${editingUser._id}`, {
+        User_Name: editForm.User_Name,
+        phone_no: editForm.phone_no,
+        comment: editForm.comment,
+      });
+      toast.success("User updated successfully");
+      setIsEditModalOpen(false);
+      // Refresh current page
+      const response = await instance.get(`${API_BASE_URL}?page=${currentPage}&limit=${entriesPerPage}`);
+      const userData = response.data;
+      setData(userData.users || []);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || err.message || "Failed to update user");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const downloadExcel = () => {
     const exportData = data.map((u) => ({
@@ -284,6 +313,7 @@ export default function RegisteredUserTable() {
                 <th className="py-2 px-4 whitespace-nowrap">Email</th>
                 <th className="py-2 px-4 whitespace-nowrap">Phone</th>
                 <th className="py-2 px-4 whitespace-nowrap">Registered At</th>
+                <th className="py-2 px-4 whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -333,12 +363,30 @@ export default function RegisteredUserTable() {
                     <td className="py-2 px-4 whitespace-nowrap text-gray-900 dark:text-gray-100">
                       {new Date(user.createdAt).toLocaleDateString()}
                     </td>
+                    <td className="py-2 px-4 whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            setEditingUser(user);
+                            setEditForm({
+                              User_Name: user.User_Name || "",
+                              phone_no: user.phone_no || "",
+                              comment: user.comment || "",
+                            });
+                            setIsEditModalOpen(true);
+                          }}
+                          className="px-2 py-1 text-xs text-blue-600 bg-blue-100 rounded hover:bg-blue-200 dark:text-blue-400 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 transition-colors"
+                        >
+                          Edit Profile & Comments
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
                   <td
-                    colSpan={4}
+                    colSpan={5}
                     className="py-4 text-center text-gray-500 dark:text-gray-400"
                   >
                     {isFiltering ? "No users found with this email" : "No users found"}
@@ -446,6 +494,71 @@ export default function RegisteredUserTable() {
           )}
         </div>
       </div>
+
+      {/* Edit Modal */}
+      {isEditModalOpen && editingUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md overflow-hidden">
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                Edit User Details
+              </h3>
+            </div>
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Name
+                </label>
+                <input
+                  type="text"
+                  value={editForm.User_Name}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, User_Name: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Phone
+                </label>
+                <input
+                  type="text"
+                  value={editForm.phone_no}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, phone_no: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Comment
+                </label>
+                <textarea
+                  value={editForm.comment}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, comment: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 min-h-[100px]"
+                  placeholder="Add an admin comment about this user..."
+                />
+              </div>
+            </div>
+            <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
+              <button
+                onClick={() => setIsEditModalOpen(false)}
+                className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                disabled={loading}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleEditSubmit}
+                className="px-4 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded transition-colors disabled:opacity-50"
+                disabled={loading}
+              >
+                {loading ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

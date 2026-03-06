@@ -333,6 +333,50 @@ export default function LeadsTable() {
     }
   };
 
+  const handleConvertLead = async (lead: any) => {
+    if (lead.status === "converted") return;
+    try {
+      setLoading(true);
+
+      const name = lead.contactInfo?.name || "Converted User";
+      const fallbackEmail = `lead_${lead._id}@motherhomes.local`;
+      const email = lead.contactInfo?.email || fallbackEmail;
+      const phone_no = lead.contactInfo?.phone || "0000000000";
+
+      // Create user
+      try {
+        await instance.post("/user", {
+          User_Name: name,
+          email,
+          phone_no,
+          password: "User@123",
+          role: "user",
+          isVerified: true,
+        });
+        toast.success("User profile created for lead!");
+      } catch (userErr: any) {
+        console.error("Error creating user from lead:", userErr);
+        // Might already exist; proceed with lead update anyway.
+        toast.info(userErr.response?.data?.message || "User might already exist. Proceeding with conversion...");
+      }
+
+      // Update lead status
+      await instance.put(`${API_BASE_URL}/${lead._id}`, { status: "converted" });
+      setData(
+        data.map((l: any) =>
+          l._id === lead._id ? { ...l, status: "converted" } : l
+        )
+      );
+      toast.success("Lead marked as converted!");
+
+    } catch (err: any) {
+      console.error("Error converting lead:", err);
+      toast.error("Failed to convert lead status.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const normalizePhone = (value?: string | number) =>
     String(value || "").replace(/\D/g, "").slice(-10);
 
@@ -1259,197 +1303,197 @@ export default function LeadsTable() {
                   const latestAppointment = leadAppointments[0];
 
                   return (
-                  <tr
-                    key={lead._id}
-                    className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-                  >
-                    <td className="py-2 px-4">
-                      <div className="flex flex-col gap-1">
-                        {lead.contactInfo?.name && (
-                          <div className="flex items-center gap-1">
-                            <User
-                              size={14}
-                              className="text-gray-500 dark:text-gray-400"
-                            />
-                            <span className="text-gray-900 dark:text-gray-100">
-                              {lead.contactInfo.name}
-                            </span>
-                          </div>
-                        )}
-                        {lead.contactInfo?.email && (
-                          <div className="flex items-center gap-1">
-                            <Mail
-                              size={14}
-                              className="text-gray-500 dark:text-gray-400"
-                            />
-                            <span className="text-gray-900 dark:text-gray-100">
-                              {lead.contactInfo.email}
-                            </span>
-                          </div>
-                        )}
-                        {lead.contactInfo?.phone && (
-                          <div className="flex items-center gap-1">
-                            <Phone
-                              size={14}
-                              className="text-gray-500 dark:text-gray-400"
-                            />
-                            <span className="text-gray-900 dark:text-gray-100">
-                              {lead.contactInfo.phone}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-2 px-4">
-                      <div className="text-sm">
-                        {lead.matchedProperties &&
-                          lead.matchedProperties.length > 0 ? (
-                          <div className="flex flex-col gap-1">
-                            {lead.matchedProperties.map((prop: any) => (
-                              <div
-                                key={prop._id || prop}
-                                className="bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800 rounded p-1.5"
-                              >
-                                <div className="font-medium text-blue-800 dark:text-blue-200 text-xs">
-                                  {prop.property_name || "Property"}
-                                </div>
-                                {(prop.address || prop.flat_no) && (
-                                  <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5 leading-tight">
-                                    {prop.flat_no ? `Flat ${prop.flat_no}, ` : ""}
-                                    {prop.address}
+                    <tr
+                      key={lead._id}
+                      className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                    >
+                      <td className="py-2 px-4">
+                        <div className="flex flex-col gap-1">
+                          {lead.contactInfo?.name && (
+                            <div className="flex items-center gap-1">
+                              <User
+                                size={14}
+                                className="text-gray-500 dark:text-gray-400"
+                              />
+                              <span className="text-gray-900 dark:text-gray-100">
+                                {lead.contactInfo.name}
+                              </span>
+                            </div>
+                          )}
+                          {lead.contactInfo?.email && (
+                            <div className="flex items-center gap-1">
+                              <Mail
+                                size={14}
+                                className="text-gray-500 dark:text-gray-400"
+                              />
+                              <span className="text-gray-900 dark:text-gray-100">
+                                {lead.contactInfo.email}
+                              </span>
+                            </div>
+                          )}
+                          {lead.contactInfo?.phone && (
+                            <div className="flex items-center gap-1">
+                              <Phone
+                                size={14}
+                                className="text-gray-500 dark:text-gray-400"
+                              />
+                              <span className="text-gray-900 dark:text-gray-100">
+                                {lead.contactInfo.phone}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-2 px-4">
+                        <div className="text-sm">
+                          {lead.matchedProperties &&
+                            lead.matchedProperties.length > 0 ? (
+                            <div className="flex flex-col gap-1">
+                              {lead.matchedProperties.map((prop: any) => (
+                                <div
+                                  key={prop._id || prop}
+                                  className="bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800 rounded p-1.5"
+                                >
+                                  <div className="font-medium text-blue-800 dark:text-blue-200 text-xs">
+                                    {prop.property_name || "Property"}
                                   </div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        ) : lead.searchQuery ? (
-                          <span className="text-gray-600 dark:text-gray-400 italic text-xs">
-                            "{lead.searchQuery}"
+                                  {(prop.address || prop.flat_no) && (
+                                    <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5 leading-tight">
+                                      {prop.flat_no ? `Flat ${prop.flat_no}, ` : ""}
+                                      {prop.address}
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          ) : lead.searchQuery ? (
+                            <span className="text-gray-600 dark:text-gray-400 italic text-xs">
+                              "{lead.searchQuery}"
+                            </span>
+                          ) : (
+                            <span className="text-gray-400 text-xs">No specific interest</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-2 px-4 whitespace-nowrap text-sm">
+                        {lead.location || "-"}
+                      </td>
+                      <td className="py-2 px-4 whitespace-nowrap">
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${lead.status === "new"
+                            ? "bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200"
+                            : lead.status === "inquiry"
+                              ? "bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200"
+                              : lead.status === "contacted"
+                                ? "bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200"
+                                : lead.status === "converted"
+                                  ? "bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200"
+                                  : "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                            }`}
+                        >
+                          {lead.status}
+                        </span>
+                      </td>
+                      <td className="py-2 px-4 whitespace-nowrap">
+                        {lead.source === "popup" ? (
+                          <span className="flex items-center gap-1.5 px-2 py-1 rounded w-fit bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300 text-xs font-bold uppercase tracking-wider border border-pink-200 dark:border-pink-800">
+                            <span className="relative flex h-2 w-2">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-pink-500"></span>
+                            </span>
+                            Popup
                           </span>
                         ) : (
-                          <span className="text-gray-400 text-xs">No specific interest</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-2 px-4 whitespace-nowrap text-sm">
-                      {lead.location || "-"}
-                    </td>
-                    <td className="py-2 px-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${lead.status === "new"
-                          ? "bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200"
-                          : lead.status === "inquiry"
-                            ? "bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200"
-                            : lead.status === "contacted"
-                              ? "bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200"
-                              : lead.status === "converted"
-                                ? "bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200"
-                                : "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200"
-                          }`}
-                      >
-                        {lead.status}
-                      </span>
-                    </td>
-                    <td className="py-2 px-4 whitespace-nowrap">
-                      {lead.source === "popup" ? (
-                        <span className="flex items-center gap-1.5 px-2 py-1 rounded w-fit bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300 text-xs font-bold uppercase tracking-wider border border-pink-200 dark:border-pink-800">
-                          <span className="relative flex h-2 w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-pink-500"></span>
+                          <span className="capitalize text-gray-900 dark:text-gray-100 text-sm">
+                            {lead.source}
                           </span>
-                          Popup
+                        )}
+                      </td>
+                      <td className="py-2 px-4 whitespace-nowrap">
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${lead.priority === "high"
+                            ? "bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-200"
+                            : lead.priority === "medium"
+                              ? "bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200"
+                              : "bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200"
+                            }`}
+                        >
+                          {lead.priority}
                         </span>
-                      ) : (
-                        <span className="capitalize text-gray-900 dark:text-gray-100 text-sm">
-                          {lead.source}
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-2 px-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${lead.priority === "high"
-                          ? "bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-200"
-                          : lead.priority === "medium"
-                            ? "bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200"
-                            : "bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200"
-                          }`}
-                      >
-                        {lead.priority}
-                      </span>
-                    </td>
-                    <td className="py-2 px-4 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
-                      {lead.timestamp ? new Date(lead.timestamp).toLocaleDateString() : lead.createdAt ? new Date(lead.createdAt).toLocaleDateString() : "-"}
-                    </td>
-                    <td className="py-2 px-4 whitespace-nowrap">
-                      {latestAppointment ? (
-                        <div className="text-xs space-y-1">
-                          <div className="font-medium text-gray-900 dark:text-gray-100">
-                            {latestAppointment.status}
+                      </td>
+                      <td className="py-2 px-4 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
+                        {lead.timestamp ? new Date(lead.timestamp).toLocaleDateString() : lead.createdAt ? new Date(lead.createdAt).toLocaleDateString() : "-"}
+                      </td>
+                      <td className="py-2 px-4 whitespace-nowrap">
+                        {latestAppointment ? (
+                          <div className="text-xs space-y-1">
+                            <div className="font-medium text-gray-900 dark:text-gray-100">
+                              {latestAppointment.status}
+                            </div>
+                            <div className="text-gray-500 dark:text-gray-400">
+                              {latestAppointment.schedule_Time
+                                ? new Date(latestAppointment.schedule_Time).toLocaleString()
+                                : "Not scheduled"}
+                            </div>
                           </div>
-                          <div className="text-gray-500 dark:text-gray-400">
-                            {latestAppointment.schedule_Time
-                              ? new Date(latestAppointment.schedule_Time).toLocaleString()
-                              : "Not scheduled"}
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-gray-400">No appointment</span>
-                      )}
-                    </td>
-                    <td className="py-2 px-4 flex gap-2 flex-wrap">
-                      <button
-                        onClick={() => openEditModal(lead)}
-                        className="flex items-center gap-1 text-sm px-2 py-1 rounded whitespace-nowrap bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 transition-colors"
-                      >
-                        <Edit size={14} />
-                        <span>Edit</span>
-                      </button>
-                      <button
-                        onClick={() => openAppointmentModal(lead._id)}
-                        className={`flex items-center gap-1 text-sm px-2 py-1 rounded whitespace-nowrap transition-colors ${leadAppointments.length
-                          ? "bg-indigo-100 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-200 hover:bg-indigo-200 dark:hover:bg-indigo-800"
-                          : "bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed"
-                          }`}
-                        disabled={!leadAppointments.length}
-                      >
-                        <Calendar size={14} />
-                        <span>Appointment</span>
-                      </button>
-                      <button
-                        onClick={() => updateLeadStatus(lead._id, "contacted")}
-                        className={`flex items-center gap-1 text-sm px-2 py-1 rounded whitespace-nowrap transition-colors ${lead.status === "contacted"
-                          ? "bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200"
-                          : "bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100"
-                          }`}
-                        disabled={lead.status === "contacted"}
-                      >
-                        <Phone size={14} />
-                        <span>Contact</span>
-                      </button>
-                      <button
-                        onClick={() => updateLeadStatus(lead._id, "converted")}
-                        className={`flex items-center gap-1 text-sm px-2 py-1 rounded whitespace-nowrap transition-colors ${lead.status === "converted"
-                          ? "bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200"
-                          : "bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100"
-                          }`}
-                        disabled={lead.status === "converted"}
-                      >
-                        <CheckCircle size={14} />
-                        <span>Convert</span>
-                      </button>
-                      <button
-                        onClick={() => updateLeadStatus(lead._id, "archived")}
-                        className={`flex items-center gap-1 text-sm px-2 py-1 rounded whitespace-nowrap transition-colors ${lead.status === "archived"
-                          ? "bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200"
-                          : "bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100"
-                          }`}
-                        disabled={lead.status === "archived"}
-                      >
-                        <Archive size={14} />
-                        <span>Archive</span>
-                      </button>
-                    </td>
-                  </tr>
+                        ) : (
+                          <span className="text-xs text-gray-400">No appointment</span>
+                        )}
+                      </td>
+                      <td className="py-2 px-4 flex gap-2 flex-wrap">
+                        <button
+                          onClick={() => openEditModal(lead)}
+                          className="flex items-center gap-1 text-sm px-2 py-1 rounded whitespace-nowrap bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 transition-colors"
+                        >
+                          <Edit size={14} />
+                          <span>Edit</span>
+                        </button>
+                        <button
+                          onClick={() => openAppointmentModal(lead._id)}
+                          className={`flex items-center gap-1 text-sm px-2 py-1 rounded whitespace-nowrap transition-colors ${leadAppointments.length
+                            ? "bg-indigo-100 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-200 hover:bg-indigo-200 dark:hover:bg-indigo-800"
+                            : "bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed"
+                            }`}
+                          disabled={!leadAppointments.length}
+                        >
+                          <Calendar size={14} />
+                          <span>Appointment</span>
+                        </button>
+                        <button
+                          onClick={() => updateLeadStatus(lead._id, "contacted")}
+                          className={`flex items-center gap-1 text-sm px-2 py-1 rounded whitespace-nowrap transition-colors ${lead.status === "contacted"
+                            ? "bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200"
+                            : "bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100"
+                            }`}
+                          disabled={lead.status === "contacted"}
+                        >
+                          <Phone size={14} />
+                          <span>Contact</span>
+                        </button>
+                        <button
+                          onClick={() => handleConvertLead(lead)}
+                          className={`flex items-center gap-1 text-sm px-2 py-1 rounded whitespace-nowrap transition-colors ${lead.status === "converted"
+                            ? "bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200"
+                            : "bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100"
+                            }`}
+                          disabled={lead.status === "converted"}
+                        >
+                          <CheckCircle size={14} />
+                          <span>Convert</span>
+                        </button>
+                        <button
+                          onClick={() => updateLeadStatus(lead._id, "archived")}
+                          className={`flex items-center gap-1 text-sm px-2 py-1 rounded whitespace-nowrap transition-colors ${lead.status === "archived"
+                            ? "bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200"
+                            : "bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100"
+                            }`}
+                          disabled={lead.status === "archived"}
+                        >
+                          <Archive size={14} />
+                          <span>Archive</span>
+                        </button>
+                      </td>
+                    </tr>
                   );
                 })
               ) : (

@@ -22,7 +22,6 @@ interface AppointmentData {
 export default function Home() {
   // State to hold API data
   const [propertyData, setPropertyData] = useState<any[]>([]);
-  const [leadsData, setLeadsData] = useState<any[]>([]);
   const [appointmentData, setAppointmentData] = useState<AppointmentData>({});
   const [dashboardStats, setDashboardStats] = useState<any>({});
   const [recentFlats, setRecentFlats] = useState<any[]>([]);
@@ -30,10 +29,8 @@ export default function Home() {
   useEffect(() => {
     let mounted = true;
     const fetchDashboardData = async () => {
-      const [statsRes, leadsRes, appointmentsRes, propertiesRes] = await Promise.allSettled([
+      const [statsRes, appointmentsRes, propertiesRes] = await Promise.allSettled([
         instance.get("/dashboard/comprehensive"),
-        // Fetch minimal leads payload; card only needs count
-        instance.get("/leads?page=1&limit=1"),
         // Keep a small list for upcoming meetings and recent appointments
         instance.get("/appointments?page=1&limit=8"),
         // Keep chart payload bounded for faster dashboard load
@@ -48,12 +45,6 @@ export default function Home() {
       } else {
         setDashboardStats({});
         setRecentFlats([]);
-      }
-
-      if (leadsRes.status === "fulfilled") {
-        setLeadsData(leadsRes.value?.data?.results || []);
-      } else {
-        setLeadsData([]);
       }
 
       if (appointmentsRes.status === "fulfilled") {
@@ -96,8 +87,6 @@ export default function Home() {
       <div className="grid grid-cols-12 gap-3 sm:gap-4 md:gap-6">
         <div className="col-span-12 space-y-6">
           <CardMetrics
-            leadsData={leadsData}
-            appointmentData={appointmentData}
             stats={dashboardStats}
           />
         </div>

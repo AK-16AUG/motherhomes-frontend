@@ -9,21 +9,17 @@ import { Home, IndianRupee } from "lucide-react";
 import Badge from "../ui/badge/Badge";
 
 export default function CardMetrics({
-  leadsData = [],
-  appointmentData = {},
   stats = {},
   previousLeadsCount = 0,
   previousAppointmentsCount = 0,
 }: {
-  leadsData?: any[];
-  appointmentData?: any;
   stats?: any;
   previousLeadsCount?: number;
   previousAppointmentsCount?: number;
 }) {
   // Compute counts
-  const leadsCount = leadsData?.length || 0;
-  const appointmentsCount = appointmentData?.appointments?.totalItems || 0;
+  const leadsCount = stats?.kpis?.totalLeads || 0;
+  const appointmentsCount = stats?.kpis?.totalAppointments || 0;
 
   // KPIs
   const totalFlats = stats?.kpis?.totalProperties || 0;
