@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import Filter, { FilterState } from "../../components/filter/Filter";
 import Card from "../../components/card/Card";
@@ -86,10 +86,7 @@ const ListPage: React.FC = () => {
 
   const [data, setData] = useState<Property[]>([]);
   const [filteredData, setFilteredData] = useState<Property[]>([]);
-  const [displayedData, setDisplayedData] = useState<Property[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [page, setPage] = useState<number>(1);
-  const [hasMore, setHasMore] = useState<boolean>(true);
   const [filters, setFilters] = useState<FilterState>({
     city: cityParam === "all" ? "" : cityParam || "",
     type: "",
@@ -98,31 +95,12 @@ const ListPage: React.FC = () => {
     sort: "relevance",
   });
 
-  const observer = useRef<IntersectionObserver>(null);
-
-  const lastCardRef = useCallback(
-    (node: HTMLDivElement | null) => {
-      if (loading) return;
-      if (observer.current) observer.current.disconnect();
-
-      observer.current = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting && hasMore) {
-          setPage((prevPage) => prevPage + 1);
-        }
-      });
-
-      if (node) observer.current.observe(node);
-    },
-    [loading, hasMore]
-  );
-
   const fetchData = async () => {
     try {
       setLoading(true);
       const res = await instance.get<{ results: Property[] }>("/property", {
         params: {
-          page,
-          limit: 10,
+          limit: 1000,
         },
       });
 
@@ -131,13 +109,7 @@ const ListPage: React.FC = () => {
         ? (res.data as unknown as Property[])
         : res.data?.results || [];
 
-      if (page === 1) {
-        setData(results);
-      } else {
-        setData((prevData) => [...prevData, ...results]);
-      }
-
-      setHasMore(results.length > 0);
+      setData(results);
     } catch (error) {
       console.error("Error fetching property data:", error);
     } finally {
@@ -145,7 +117,7 @@ const ListPage: React.FC = () => {
     }
   };
 
-  const applyFilters = useCallback((properties: Property[], filterState: FilterState) => {
+  const applyFilters = (properties: Property[], filterState: FilterState) => {
     let filtered = [...properties];
 
     if (filterState.city && filterState.city.toLowerCase() !== "all") {
@@ -188,27 +160,22 @@ const ListPage: React.FC = () => {
     }
 
     setFilteredData(filtered);
-  }, []);
+  };
 
-  const handleFilter = useCallback(
-    (newFilters: FilterState) => {
-      setFilters(newFilters);
-      setPage(1);
-      setHasMore(true);
-      applyFilters(data, newFilters);
-    },
-    [data, applyFilters]
-  );
+  const handleFilter = (newFilters: FilterState) => {
+    setFilters(newFilters);
+    applyFilters(data, newFilters);
+  };
 
   useEffect(() => {
     fetchData();
-  }, [page]);
+  }, []);
 
   useEffect(() => {
     if (data.length > 0) {
       applyFilters(data, filters);
     }
-  }, [data, filters, applyFilters]);
+  }, [data, filters]);
 
   useEffect(() => {
     if (cityParam) {
@@ -216,31 +183,11 @@ const ListPage: React.FC = () => {
       if (cityValue !== filters.city) {
         const newFilters = { ...filters, city: cityValue };
         setFilters(newFilters);
-        setPage(1);
-        setHasMore(true);
       }
     }
-  }, [cityParam, filters]);
+  }, [cityParam]);
 
-  useEffect(() => {
-    if (filteredData.length > 0) {
-      const itemsPerPage = 10;
-      const endIndex = page * itemsPerPage;
-      const newDisplayedData = filteredData.slice(0, endIndex);
-      setDisplayedData(newDisplayedData);
-      setHasMore(endIndex < filteredData.length);
-    } else {
-      setDisplayedData([]);
-    }
-  }, [filteredData, page]);
 
-  useEffect(() => {
-    return () => {
-      if (observer.current) {
-        observer.current.disconnect();
-      }
-    };
-  }, []);
 
   return (
     <>
@@ -265,27 +212,24 @@ const ListPage: React.FC = () => {
             <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="order-2 lg:order-1">
                 <div className="grid grid-cols-1 gap-4">
-                  {displayedData.length > 0 ? (
-                    displayedData.map((item, index) => {
-                      const isLastItem = index === displayedData.length - 1;
-                      return (
-                        <div key={item._id} ref={isLastItem ? lastCardRef : null}>
-                          <Card
-                            index={index}
-                            item={{
-                              id: item._id,
-                              img: item.images?.[0] || "",
-                              title: item.property_name,
-                              address: `${item.city}, ${item.state}`,
-                              bedroom: item.category === "pg" ? parseInt(item.totalCapacity) || 0 : item.bed,
-                              bathroom: item.bathroom,
-                              price: item.rate,
-                              category: item.category
-                            }}
-                          />
-                        </div>
-                      );
-                    })
+                  {filteredData.length > 0 ? (
+                    filteredData.map((item, index) => (
+                      <div key={item._id}>
+                        <Card
+                          index={index}
+                          item={{
+                            id: item._id,
+                            img: item.images?.[0] || "",
+                            title: item.property_name,
+                            address: `${item.city}, ${item.state}`,
+                            bedroom: item.category === "pg" ? parseInt(item.totalCapacity) || 0 : item.bed,
+                            bathroom: item.bathroom,
+                            price: item.rate,
+                            category: item.category
+                          }}
+                        />
+                      </div>
+                    ))
                   ) : (
                     <div className="text-center py-8">
                       <p className="text-gray-500">
@@ -293,9 +237,9 @@ const ListPage: React.FC = () => {
                       </p>
                     </div>
                   )}
-                  {loading && displayedData.length > 0 && (
+                  {loading && (
                     <div className="text-center py-4">
-                      <p className="text-gray-500">Loading more properties...</p>
+                      <p className="text-gray-500">Loading properties...</p>
                     </div>
                   )}
                 </div>
@@ -304,7 +248,7 @@ const ListPage: React.FC = () => {
               <div className="order-1 lg:order-2">
                 <div className="w-full h-[300px] sm:h-[400px] lg:h-[calc(100vh-6rem)] sticky top-24">
                   <Map items={
-                    displayedData
+                    filteredData
                       .filter((item: any) => item.latitude && item.longitude)
                       .map((item: any) => ({
                         id: item._id,
