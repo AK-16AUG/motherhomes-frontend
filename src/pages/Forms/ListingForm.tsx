@@ -387,15 +387,11 @@ export default function ListingForm() {
       }
 
       if (isEditMode && id) {
-        await instance.put(`/property/${id}`, formDataToSend, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
+        await instance.put(`/property/${id}`, formDataToSend);
         toast.success("Property updated successfully!");
         navigate("/alllisting"); // Redirect to listing table after update
       } else {
-        await instance.post("/property", formDataToSend, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
+        await instance.post("/property", formDataToSend);
         toast.success("Property created successfully!");
         // Optional: clear form or redirect
         setFormData({
