@@ -79,9 +79,8 @@ const MultiSelect = ({
       </label>
       <div className="relative">
         <div
-          className={`w-full rounded border border-gray-300 bg-white p-2 text-sm focus:border-blue-500 focus:outline-none min-h-[42px] flex flex-wrap gap-2 cursor-pointer text-gray-900 ${
-            isOpen ? "ring-2 ring-blue-300 border-blue-500" : ""
-          }`}
+          className={`w-full rounded border border-gray-300 bg-white p-2 text-sm focus:border-blue-500 focus:outline-none min-h-[42px] flex flex-wrap gap-2 cursor-pointer text-gray-900 ${isOpen ? "ring-2 ring-blue-300 border-blue-500" : ""
+            }`}
           onClick={() => setIsOpen(!isOpen)}
         >
           {selected.length === 0 ? (
@@ -128,9 +127,8 @@ const MultiSelect = ({
             {options.map((option) => (
               <div
                 key={option._id}
-                className={`px-4 py-2 hover:bg-blue-50 cursor-pointer text-gray-900 ${
-                  selected.includes(option._id) ? "bg-blue-100" : ""
-                }`}
+                className={`px-4 py-2 hover:bg-blue-50 cursor-pointer text-gray-900 ${selected.includes(option._id) ? "bg-blue-100" : ""
+                  }`}
                 onClick={(e) => {
                   e.stopPropagation();
                   toggleOption(option._id);
@@ -374,18 +372,18 @@ export default function ListingForm() {
 
       // Handle existing images for update
       if (isEditMode) {
-         // The backend expects existingImages to be passed.
-         // Since FormData supports strings, we can append them. 
-         // Most backends (like your propertyRouter) check req.body.existingImages
-         // If using FormData, we might need to append them individually or as JSON string depending on backend parsing.
-         // Based on your backend code: 
-         // if (typeof req.body.existingImages === 'string') JSON.parse...
-         // else if (Array.isArray(req.body.existingImages))...
-         // So appending multiple "existingImages" keys works if multer handles it, OR we can JSON stringify it.
-         // To be safe and matching the backend logic:
-         formData.existingImages.forEach((imgUrl) => {
-             formDataToSend.append("existingImages", imgUrl);
-         });
+        // The backend expects existingImages to be passed.
+        // Since FormData supports strings, we can append them. 
+        // Most backends (like your propertyRouter) check req.body.existingImages
+        // If using FormData, we might need to append them individually or as JSON string depending on backend parsing.
+        // Based on your backend code: 
+        // if (typeof req.body.existingImages === 'string') JSON.parse...
+        // else if (Array.isArray(req.body.existingImages))...
+        // So appending multiple "existingImages" keys works if multer handles it, OR we can JSON stringify it.
+        // To be safe and matching the backend logic:
+        formData.existingImages.forEach((imgUrl) => {
+          formDataToSend.append("existingImages", imgUrl);
+        });
       }
 
       if (isEditMode && id) {
@@ -400,30 +398,30 @@ export default function ListingForm() {
         });
         toast.success("Property created successfully!");
         // Optional: clear form or redirect
-         setFormData({
-            property_name: "",
-            description: "",
-            rate: "",
-            category: "rent",
-            amenities: [],
-            services: [],
-            images: [],
-            existingImages: [],
-            videos: [""],
-            furnishing_type: "Raw",
-            city: "",
-            state: "",
-            address: "",
-            flat_no: "",
-            bed: 1,
-            bathroom: 1,
-            area: "",
-            availability: true,
-            latitude: "",
-            longitude: "",
-            perPersonPrice: "",
-            totalCapacity: "",
-          });
+        setFormData({
+          property_name: "",
+          description: "",
+          rate: "",
+          category: "rent",
+          amenities: [],
+          services: [],
+          images: [],
+          existingImages: [],
+          videos: [""],
+          furnishing_type: "Raw",
+          city: "",
+          state: "",
+          address: "",
+          flat_no: "",
+          bed: 1,
+          bathroom: 1,
+          area: "",
+          availability: true,
+          latitude: "",
+          longitude: "",
+          perPersonPrice: "",
+          totalCapacity: "",
+        });
       }
     } catch (err: any) {
       toast.error(err.response?.data?.error || "Failed to save property");
@@ -806,9 +804,54 @@ export default function ListingForm() {
                   formData.images.length + formData.existingImages.length >= 10
                 }
               />
-              
+
+              {/* New Images — shown first (will appear first in listing) */}
+              {formData.images.length > 0 && (
+                <div className="mt-4">
+                  <h4 className="text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                    New Images: <span className="text-blue-500 font-normal text-xs">(These will be shown first)</span>
+                  </h4>
+                  <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {formData.images.map((img, idx) => (
+                      <li
+                        key={`new-${idx}`}
+                        className="border border-blue-300 dark:border-blue-600 bg-blue-50 dark:bg-gray-800 rounded p-2 flex flex-col relative"
+                      >
+                        {idx === 0 && (
+                          <span className="absolute top-1 left-1 bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded z-10">
+                            ★ First Image
+                          </span>
+                        )}
+                        <div className="w-full h-32 mb-2 overflow-hidden rounded">
+                          <img
+                            src={URL.createObjectURL(img)}
+                            alt={`Preview ${idx}`}
+                            className="w-full h-full object-cover"
+                            onLoad={(e) =>
+                              URL.revokeObjectURL(
+                                (e.target as HTMLImageElement).src
+                              )
+                            }
+                          />
+                        </div>
+                        <span className="text-sm truncate mb-1 text-gray-700 dark:text-gray-300">
+                          {img.name}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeImage(idx)}
+                          className="text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 text-sm self-end"
+                        >
+                          Remove
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               {/* Existing Images */}
-               {formData.existingImages.length > 0 && (
+              {formData.existingImages.length > 0 && (
                 <div className="mt-4">
                   <h4 className="text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
                     Existing Images:
@@ -839,46 +882,6 @@ export default function ListingForm() {
                 </div>
               )}
 
-              {/* New Images */}
-              {formData.images.length > 0 && (
-                <div className="mt-4">
-                  <h4 className="text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-                    New Images:
-                  </h4>
-                  <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                    {formData.images.map((img, idx) => (
-                      <li
-                        key={`new-${idx}`}
-                        className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded p-2 flex flex-col"
-                      >
-                        <div className="w-full h-32 mb-2 overflow-hidden rounded">
-                          <img
-                            src={URL.createObjectURL(img)}
-                            alt={`Preview ${idx}`}
-                            className="w-full h-full object-cover"
-                            onLoad={(e) =>
-                              URL.revokeObjectURL(
-                                (e.target as HTMLImageElement).src
-                              )
-                            }
-                          />
-                        </div>
-                        <span className="text-sm truncate mb-1 text-gray-700 dark:text-gray-300">
-                          {img.name}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => removeImage(idx)}
-                          className="text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 text-sm self-end"
-                        >
-                          Remove
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-             
               {formData.images.length + formData.existingImages.length >= 10 && (
                 <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                   Maximum 10 images reached
