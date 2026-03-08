@@ -87,6 +87,8 @@ const ListPage: React.FC = () => {
   const [data, setData] = useState<Property[]>([]);
   const [filteredData, setFilteredData] = useState<Property[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
+  const [page, setPage] = useState<number>(1);
+  const [randomImageMap, setRandomImageMap] = useState<Record<string, string>>({});
   const [filters, setFilters] = useState<FilterState>({
     city: cityParam === "all" ? "" : cityParam || "",
     type: "",
@@ -94,6 +96,18 @@ const ListPage: React.FC = () => {
     bedrooms: "",
     sort: "relevance",
   });
+
+  const LISTING_IMAGE_COUNT = 14;
+
+  const getRandomUniqueImages = (count: number): string[] => {
+    const indices = Array.from({ length: LISTING_IMAGE_COUNT }, (_, i) => i + 1);
+    // Shuffle
+    for (let i = indices.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [indices[i], indices[j]] = [indices[j], indices[i]];
+    }
+    return indices.slice(0, count).map(i => `/images/listings/${i}.jpeg`);
+  };
 
   const fetchData = async () => {
     try {
@@ -116,6 +130,29 @@ const ListPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (filteredData.length > 0) {
+      const startIndex = (page - 1) * 10;
+      const currentPageData = filteredData.slice(startIndex, startIndex + 10);
+
+      // Assign unique random images to this batch if not already assigned
+      const randomImages = getRandomUniqueImages(currentPageData.length);
+      const newMap: Record<string, string> = { ...randomImageMap };
+      let changed = false;
+
+      currentPageData.forEach((prop, idx) => {
+        if (!newMap[prop._id]) {
+          newMap[prop._id] = randomImages[idx];
+          changed = true;
+        }
+      });
+
+      if (changed) {
+        setRandomImageMap(newMap);
+      }
+    }
+  }, [filteredData, page]);
 
   const applyFilters = (properties: Property[], filterState: FilterState) => {
     let filtered = [...properties];
@@ -172,6 +209,10 @@ const ListPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    setPage(1); // Reset to page 1 when filters change
+  }, [filters]);
+
+  useEffect(() => {
     if (data.length > 0) {
       applyFilters(data, filters);
     }
@@ -213,28 +254,59 @@ const ListPage: React.FC = () => {
               <div className="order-2 lg:order-1">
                 <div className="grid grid-cols-1 gap-4">
                   {filteredData.length > 0 ? (
-                    filteredData.map((item, index) => (
-                      <div key={item._id}>
-                        <Card
-                          index={index}
-                          item={{
-                            id: item._id,
-                            img: item.images?.[0] || "",
-                            title: item.property_name,
-                            address: `${item.city}, ${item.state}`,
-                            bedroom: item.category === "pg" ? parseInt(item.totalCapacity) || 0 : item.bed,
-                            bathroom: item.bathroom,
-                            price: item.rate,
-                            category: item.category
-                          }}
-                        />
-                      </div>
-                    ))
+                    filteredData
+                      .slice((page - 1) * 10, page * 10)
+                      .map((item, index) => (
+                        <div key={item._id}>
+                          <Card
+                            index={index}
+                            item={{
+                              id: item._id,
+                              img: randomImageMap[item._id] || item.images?.[0] || "",
+                              title: item.property_name,
+                              address: `${item.city}, ${item.state}`,
+                              bedroom: item.category === "pg" ? parseInt(item.totalCapacity) || 0 : item.bed,
+                              bathroom: item.bathroom,
+                              price: item.rate,
+                              category: item.category
+                            }}
+                          />
+                        </div>
+                      ))
                   ) : (
                     <div className="text-center py-8">
                       <p className="text-gray-500">
                         {loading ? "Loading properties..." : "No properties found matching your criteria."}
                       </p>
+                    </div>
+                  )}
+
+                  {/* Pagination Controls */}
+                  {filteredData.length > 10 && !loading && (
+                    <div className="flex justify-center items-center gap-4 mt-8 py-4">
+                      <button
+                        onClick={() => {
+                          setPage(p => Math.max(1, p - 1));
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}
+                        disabled={page === 1}
+                        className="px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        Previous
+                      </button>
+                      <span className="text-sm text-gray-600">
+                        Page <span className="font-semibold">{page}</span> of <span className="font-semibold">{Math.ceil(filteredData.length / 10)}</span>
+                      </span>
+                      <button
+                        onClick={() => {
+                          setPage(p => Math.min(Math.ceil(filteredData.length / 10), p + 1));
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}
+                        disabled={page >= Math.ceil(filteredData.length / 10)}
+                        className="px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        Next
+                      </button>
                     </div>
                   )}
                   {loading && (
@@ -254,7 +326,7 @@ const ListPage: React.FC = () => {
                         id: item._id,
                         latitude: parseFloat(item.latitude),
                         longitude: parseFloat(item.longitude),
-                        img: item.images?.[0] || "",
+                        img: randomImageMap[item._id] || item.images?.[0] || "",
                         title: item.property_name,
                         bedroom: item.bed,
                         price: item.rate,
